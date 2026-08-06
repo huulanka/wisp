@@ -1,0 +1,43 @@
+(footprint "BH1750FVI-TR_WSOF6"
+	(version 20251024)
+	(generator "wisp")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(descr "ROHM BH1750FVI-TR, WSOF6 package, 0.5mm pitch. DRAFT footprint derived from datasheet text extraction (ROHM BH1750FVI Technical Note Rev.C, p.17) -- verify pad geometry against the mechanical drawing before ordering PCBA.")
+	(tags "BH1750 WSOF6 ambient light sensor DRAFT-VERIFY")
+	(attr smd)
+	(property "Reference" "REF**"
+		(at 0 -2.2 0)
+		(layer "F.SilkS")
+		(effects (font (size 1 1) (thickness 0.15)))
+	)
+	(property "Value" "BH1750FVI-TR"
+		(at 0 2.2 0)
+		(layer "F.Fab")
+		(effects (font (size 1 1) (thickness 0.15)))
+	)
+	(fp_rect
+		(start -0.8 -0.75)
+		(end 0.8 0.75)
+		(stroke (width 0.1) (type solid))
+		(layer "F.Fab")
+	)
+	(fp_line
+		(start -0.8 -0.9) (end -0.5 -0.9)
+		(stroke (width 0.12) (type solid)) (layer "F.SilkS")
+	)
+	(fp_line
+		(start -0.8 -0.9) (end -0.8 -0.6)
+		(stroke (width 0.12) (type solid)) (layer "F.SilkS")
+	)
+	(fp_line
+		(start -0.8 0.9) (end 0.8 0.9)
+		(stroke (width 0.12) (type solid)) (layer "F.SilkS")
+	)
+	(pad "1" smd rect (at -0.5 -0.9) (size 0.3 0.4) (layers "F.Cu" "F.Paste" "F.Mask"))
+	(pad "2" smd rect (at 0 -0.9) (size 0.3 0.4) (layers "F.Cu" "F.Paste" "F.Mask"))
+	(pad "3" smd rect (at 0.5 -0.9) (size 0.3 0.4) (layers "F.Cu" "F.Paste" "F.Mask"))
+	(pad "4" smd rect (at 0.5 0.9) (size 0.3 0.4) (layers "F.Cu" "F.Paste" "F.Mask"))
+	(pad "5" smd rect (at 0 0.9) (size 0.3 0.4) (layers "F.Cu" "F.Paste" "F.Mask"))
+	(pad "6" smd rect (at -0.5 0.9) (size 0.3 0.4) (layers "F.Cu" "F.Paste" "F.Mask"))
+)
