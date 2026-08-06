@@ -1,1 +1,4 @@
 .claude/worktrees/
+hardware/kicad/.history/
+hardware/kicad/*.lck
+hardware/kicad/*.kicad_prl
