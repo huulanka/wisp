@@ -102,24 +102,56 @@ above:
   wired to an ADC1-capable GPIO. **Recommendation: include, but note the
   ADC1-only constraint for the pin plan.**
 
-## Open questions
+## Dropped
 
-- **PIR motion sensor footprint vs. the already-planned LD2410 mmWave
-  header**: a PIR is cheaper and simpler than mmWave but strictly worse
-  (motion-only, no "presence while still" detection, more false
-  negatives). Since mmWave is already planned, a PIR footprint would
-  mostly be redundant unless there's a cost-sensitive variant in mind
-  where mmWave might not be populated. Leaning toward **not** adding
-  it, but flagging for a decision rather than dropping unilaterally.
-- **RS485/Modbus transceiver footprint**: useful for integrating with
-  classic building-automation/industrial sensors, but feels like a
-  stretch for a home climate monitor unless there's a specific use
-  case in mind. Leaning toward **not** adding it.
+- **PIR motion sensor footprint**: redundant next to the already-planned
+  LD2410 mmWave header (PIR is motion-only, no presence-while-still
+  detection, more false negatives). Not added.
+- **RS485/Modbus transceiver footprint**: too much of a stretch for a
+  home climate monitor without a concrete use case. Not added.
+
+## GPIO pin plan
+
+Read from the actual schematic netlist (`hardware/kicad/wisp.kicad_sch`,
+component `U3`), not guessed, to avoid collisions.
+
+**Already committed by the base design:**
+
+| Pin | Function |
+|---|---|
+| IO1 / IO3 | UART0 TX/RX — CH340C programming interface |
+| EN, IO0 | Reset / boot mode strapping |
+| IO21, IO22 | SDA, SCL — onboard I2C bus (SCD41, BME680, BH1750) |
+| IO2 | Status LED (becomes the WS2812 data line, see decisions above) |
+
+**Never route anything here:** pads for `SCK/CLK`, `SCS/CMD`, `SDI/SD1`,
+`SDO/SD0`, `SHD/SD2`, `SWP/SD3` (GPIO6-11) exist on the module footprint
+but are internally wired to the WROOM-32's embedded SPI flash. Using them
+for anything else will break the module.
+
+**New DNP assignments:**
+
+| Pin(s) | Feature | Notes |
+|---|---|---|
+| IO12, IO13, IO14, IO15 | JTAG testpads (MTDI/MTCK/MTMS/MTDO) | Pads only, no connector. These are also strapping pins — keep unloaded in normal operation. |
+| IO16, IO17 | Second I2C bus (SDA2/SCL2) | Own pull-ups, isolated from the internal sensor bus. |
+| IO4, IO5 | mmWave UART (TX/RX to LD2410) | Routed via a spare HW UART, no conflict with the CH340 programming UART. |
+| IO25, IO26, IO27 | I2S microphone (SCK, WS, SD) | ADC2-capable pins, but unused as ADC here — no WiFi conflict since these are pure digital I2S signals. |
+| IO19 | Switched DC output (MOSFET gate) | |
+| IO18 | Piezo buzzer | |
+| IO23 | Reed/Hall contact input | Uses the ESP32's internal pull-up, no external resistor needed. |
+| IO32 | 1-Wire bus (e.g. DS18B20) | Needs an external pull-up (~4.7k) for proper open-drain operation with multiple devices. |
+| VP / IO36 | ADC analog pad | True input-only ADC1 channel — ideal for an analog sensor pad, no WiFi/ADC2 conflict. |
+| IO33, IO34, IO35, VN / IO39 | Generic expansion header (+ 3V3, GND) | All four are also ADC1-capable, so the expansion header doubles as extra analog inputs if needed later. |
+
+Every currently-unused GPIO on the module is accounted for — nothing is
+left both unassigned and unbroken-out, so there's no pin left over that
+would need a later, undocumented decision.
 
 ## Next step
 
-With the DNP feature set settled (pending the two open questions above),
-the next concrete step is a GPIO pin plan: assigning specific ESP32 pins
-to each DNP feature so nothing collides (particularly watching JTAG pins
-12-15 and ADC1-vs-ADC2 for the analog pad), before touching the
-schematic.
+Pin plan is settled. Next: update the schematic — add the DNP footprints
+above with their assigned nets, swap the status LED for a WS2812, add the
+PTC fuse on VBUS and ESD protection on the off-board-facing signals
+(second I2C, switched output, reed contact, 1-Wire, expansion header),
+then re-run ERC via the `kicad-check` skill before layout.
