@@ -5060,7 +5060,7 @@
   )
 
   (symbol (lib_id "Diode:PESD5V0L1UL") (at 44.45 195.58 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid aaeea9bd-00de-42fd-be5c-f1e2d06d8d22)
     (property "Reference" "D2" (at 44.45 187.58 0)
       (effects (font (size 1.27 1.27)))
@@ -5083,7 +5083,7 @@
   )
 
   (symbol (lib_id "Diode:PESD5V0L1UL") (at 74.93 195.58 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid 36351d5e-3d5c-438a-90de-64f0259b2d17)
     (property "Reference" "D3" (at 74.93 187.58 0)
       (effects (font (size 1.27 1.27)))
@@ -5204,7 +5204,7 @@
   )
 
   (symbol (lib_id "Diode:1N4148") (at 224.79 177.8 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid 0d2a7a62-9f1f-4c54-a06e-b402f5d733f6)
     (property "Reference" "D4" (at 224.79 169.8 0)
       (effects (font (size 1.27 1.27)))
@@ -5257,6 +5257,9 @@
     )
     (property "Value" "Buzzer" (at 265.43 185.8 0)
       (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "Buzzer_Beeper:Buzzer_CUI_CPT-9019S-SMT" (at 265.43 177.8 0)
+      (effects (font (size 1.27 1.27)) hide)
     )
     (pin "1" (uuid 70b82ab3-2575-47cc-abff-6d37a216943a))
     (pin "2" (uuid 1540533d-ba8d-4aaf-81cb-ec5a7b1c0795))
@@ -5340,7 +5343,7 @@
   )
 
   (symbol (lib_id "Diode:PESD5V0L1UL") (at 44.45 219.71 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid 8c3b3c91-4c5f-406b-82ef-05936516bfd3)
     (property "Reference" "D5" (at 44.45 211.71 0)
       (effects (font (size 1.27 1.27)))
@@ -5410,7 +5413,7 @@
   )
 
   (symbol (lib_id "Diode:PESD5V0L1UL") (at 100.33 224.79 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid 5b1ccb33-a91d-4b28-8e66-134e72efd7c8)
     (property "Reference" "D6" (at 100.33 216.79 0)
       (effects (font (size 1.27 1.27)))
@@ -5484,7 +5487,7 @@
   )
 
   (symbol (lib_id "Diode:PESD5V0L1UL") (at 195.58 232.41 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid 8157016f-c37a-4ca3-96e9-7d627185c82b)
     (property "Reference" "D7" (at 195.58 224.41 0)
       (effects (font (size 1.27 1.27)))
@@ -5507,7 +5510,7 @@
   )
 
   (symbol (lib_id "Diode:PESD5V0L1UL") (at 220.98 232.41 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid 5ccda8f2-8ba9-4258-8abd-b197929d2488)
     (property "Reference" "D8" (at 220.98 224.41 0)
       (effects (font (size 1.27 1.27)))
@@ -5530,7 +5533,7 @@
   )
 
   (symbol (lib_id "Diode:PESD5V0L1UL") (at 246.38 232.41 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid 1700de12-fcb4-4996-9a0d-0b11b49881a8)
     (property "Reference" "D9" (at 246.38 224.41 0)
       (effects (font (size 1.27 1.27)))
@@ -5553,7 +5556,7 @@
   )
 
   (symbol (lib_id "Diode:PESD5V0L1UL") (at 271.78 232.41 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid 4997b7ba-ef87-4a89-ab17-91371e28aed3)
     (property "Reference" "D10" (at 271.78 224.41 0)
       (effects (font (size 1.27 1.27)))
@@ -5576,7 +5579,7 @@
   )
 
   (symbol (lib_id "Connector:TestPoint") (at 30.48 261.62 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid a5de53e0-41cf-44a4-9544-17ad36c15ee8)
     (property "Reference" "TP1" (at 30.48 258.62 0)
       (effects (font (size 1.27 1.27)))
@@ -5598,7 +5601,7 @@
   )
 
   (symbol (lib_id "Connector:TestPoint") (at 45.72 261.62 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid 65f0c073-293f-40b5-b550-c6e6d580ab5f)
     (property "Reference" "TP2" (at 45.72 258.62 0)
       (effects (font (size 1.27 1.27)))
@@ -5620,7 +5623,7 @@
   )
 
   (symbol (lib_id "Connector:TestPoint") (at 60.96 261.62 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid f5326a00-8c3c-4c65-87d8-8b254f0679c2)
     (property "Reference" "TP3" (at 60.96 258.62 0)
       (effects (font (size 1.27 1.27)))
@@ -5642,7 +5645,7 @@
   )
 
   (symbol (lib_id "Connector:TestPoint") (at 76.2 261.62 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid 02c62850-c3c5-4232-82d8-c9845404a2a8)
     (property "Reference" "TP4" (at 76.2 258.62 0)
       (effects (font (size 1.27 1.27)))
@@ -5664,7 +5667,7 @@
   )
 
   (symbol (lib_id "Connector:TestPoint") (at 139.7 261.62 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid 20243313-1778-4087-a993-5edb1e76a482)
     (property "Reference" "TP5" (at 139.7 258.62 0)
       (effects (font (size 1.27 1.27)))
@@ -5686,7 +5689,7 @@
   )
 
   (symbol (lib_id "Connector:TestPoint") (at 154.94 261.62 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid c66adc4e-267e-451a-a265-bd90c9f81a4e)
     (property "Reference" "TP6" (at 154.94 258.62 0)
       (effects (font (size 1.27 1.27)))
@@ -5708,7 +5711,7 @@
   )
 
   (symbol (lib_id "Connector:TestPoint") (at 170.18 261.62 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid a8e32949-ec36-4f95-8e15-cd7aab1ef934)
     (property "Reference" "TP7" (at 170.18 258.62 0)
       (effects (font (size 1.27 1.27)))
@@ -5730,7 +5733,7 @@
   )
 
   (symbol (lib_id "Connector:TestPoint") (at 185.42 261.62 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid a9f39af7-e7e8-4b27-8201-5111b2faa5cc)
     (property "Reference" "TP8" (at 185.42 258.62 0)
       (effects (font (size 1.27 1.27)))
@@ -5752,7 +5755,7 @@
   )
 
   (symbol (lib_id "Connector:TestPoint") (at 200.66 261.62 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid 3cb7682e-526d-45a2-a444-93870f1d1d10)
     (property "Reference" "TP9" (at 200.66 258.62 0)
       (effects (font (size 1.27 1.27)))
@@ -5774,7 +5777,7 @@
   )
 
   (symbol (lib_id "Connector:TestPoint") (at 215.9 261.62 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid eead9ddd-d6c0-4b69-b0de-02079d2653d2)
     (property "Reference" "TP10" (at 215.9 258.62 0)
       (effects (font (size 1.27 1.27)))
@@ -5796,7 +5799,7 @@
   )
 
   (symbol (lib_id "Device:Polyfuse") (at 260.35 224.79 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp yes)
+    (in_bom yes) (on_board yes) 
     (uuid d451ff4d-5de4-4e8d-a045-7f6c9fad97f2)
     (property "Reference" "F1" (at 260.35 216.79 0)
       (effects (font (size 1.27 1.27)))

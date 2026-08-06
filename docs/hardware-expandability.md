@@ -155,3 +155,38 @@ above with their assigned nets, swap the status LED for a WS2812, add the
 PTC fuse on VBUS and ESD protection on the off-board-facing signals
 (second I2C, switched output, reed contact, 1-Wire, expansion header),
 then re-run ERC via the `kicad-check` skill before layout.
+
+## First physical prototype: what gets populated
+
+For the first hand-assembled prototype, only the always-on "Include" items
+are populated: test points (TP1-TP10), the PTC fuse (F1), and the ESD
+diodes (D2-D10, all off-board-facing signals). Everything under
+"Include (DNP)" above — buzzer, second I2C header, mmWave UART header,
+mic header, switched-output header (+ MOSFET/gate resistor), reed header,
+1-Wire header, analog pad header, expansion header — stays unpopulated for
+this build. `hardware/fab/wisp-bom-prototype.csv` and
+`wisp-cpl-prototype.csv` already reflect this (DNP parts excluded); the
+full BOM including DNP parts is in `wisp-bom-full.csv` for later builds.
+
+Two schematic DNP flags were corrected while wiring this up: F1 and
+TP1-TP10 had been marked DNP even though the decision table above lists
+them as always-populated "Include" items, and one of the ESD diodes (D10,
+covering `EXP_IO39`) was missed when the other seven were added — all
+three are fixed now.
+
+## PCB layout status
+
+A first-pass layout exists at `hardware/kicad/wisp.kicad_pcb`: all 69
+schematic parts are placed and DRC-clean (0 violations), with a 140x100mm
+outline, 4 M3 mounting holes, and the ESP32-WROOM-32's antenna keepout
+sitting clear near the top edge. No enclosure sketch exists yet, so the
+outline and part placement are not final — expect both to move once an
+enclosure shape is picked.
+
+GND and +3V3 are realized as copper pours (GND on the bottom layer with
+stitching vias, +3V3 on the top layer) rather than individual traces, so
+those two nets are already fully connected. The other 44 signal nets are
+still ratsnest (unrouted) — routing 44 nets collision-free on a 2-layer
+board needs either manual routing in the KiCad GUI or a real autorouter
+(e.g. Freerouting), neither of which this pass could safely automate. **The
+board is not yet fab-ready** — Gerbers weren't generated for this reason.
