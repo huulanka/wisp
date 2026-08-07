@@ -358,6 +358,88 @@ flags) — zero `clearance` or `shorting_items` findings. BOM/CPL
 re-exported (CPL positions changed; BOM unchanged). Gerbers/drill
 regenerated from the updated board.
 
+Not all 6 stayed stuck: one further pass (below) found and fixed the
+specific net responsible for most of the remaining congestion, closing
+one more of these — `D9`'s GND pad. 5 gaps remain: `U5` pads 2/6, `U6`
+pads 1/5, per the follow-up below.
+
+## Placement review: decoupling caps found too far from their ICs, and a targeted /+5V_EXT reroute
+
+Prompted by a fair challenge: is the placement actually well thought out,
+or has repeated proportional scaling just carried forward an
+under-optimized layout? Checked systematically rather than assuming.
+
+**Real finding: the four 100nF decoupling caps (`C8`-`C11`) sit 8-13mm
+from the +3V3 pin of the IC they decouple** (`U3`/`U4`/`U5`/`U6`), well
+past the ~2-3mm generally recommended for effective local supply
+filtering — none of them is unambiguously "the" decoupling cap for any
+one IC by position. This is a genuine design-quality gap, independent of
+the pour-routing issue, and most likely inherited from the original
+140x100mm layout's spacing surviving unchanged through every later
+proportional scale (uniform scaling preserves relative sloppiness, it
+doesn't fix it).
+
+Tried moving `C8`→`U4`, `C9`→`U5`, `C10`→`U6`, `C11`→`U3` (each to <3mm
+from its IC's +3V3 pin) and re-routing from scratch. Verified clean on
+its own (no new courtyard/clearance issues), but the resulting
+Freerouting/stitch pass converged on **11 unconnected pour islands**,
+worse than the 5 already achieved — including making `U5`'s decoupling
+gap worse, not better. Given a floating power pin (a component that
+plain doesn't work) is a more severe defect than a decoupling cap that's
+farther from ideal than it should be but still electrically present, this
+change was reverted in favor of keeping the 5-gap result. **The
+decoupling-cap distance finding stands as a real, documented issue for a
+future layout revision** — it just isn't worth trading away verified
+pour-connectivity progress for in this pass.
+
+Also tried a non-uniform regrow: shrink the board 100x100mm → 90x90mm
+(addressing "this board feels bigger than it needs to be" for so few
+components) while specifically pushing components within 10mm of `U5`/`U6`
+further outward, giving those two ICs extra local room without growing
+the whole board. Result: **8 unconnected**, worse than 100x100mm uniform,
+and `U6` still had zero +3V3 connections either way — confirming `U6`'s
+problem is intrinsic to its own 0.3x0.4mm pad geometry relative to its
+immediate routed neighbors, not a placement-density problem a smarter
+regrow could solve. Reverted.
+
+**What did work: identifying and specifically rerouting `/+5V_EXT`.**
+This single net (connecting `F1`, `D4`, and two DNP headers `J3`/`J5` at
+opposite corners of the board) kept showing up as the direct physical
+blocker across nearly every remaining gap investigation — Freerouting
+had no reason to avoid routing it straight through the `U5`/`U6` sensor
+cluster, since it doesn't know that area needs to stay clear for
+GND/+3V3 pour access later. Ripped up just this one net and re-routed it
+with A\* pathfinding under an explicit local keepout around `U5`+`U6`
+(4mm margin), forcing it around the cluster instead of through it — full
+reroute succeeded, zero new violations. Re-running the layer-hop/A\*
+stitching passes afterward closed one further gap (`D9`'s GND pad).
+
+**Result: 5 of the original 26 GND/+3V3 gaps remain** — `U5` pads 2 and
+6, `U6` pads 1 and 5. Also attempted directly nudging `U6`'s own
+footprint position (it has no other components within 8mm, so courtyard
+collision wasn't a concern) — every offset tried caused new
+`shorting_items` against `U6`'s *own* already-routed neighbor pads,
+because the problem is `U6`'s 0.5mm pin pitch relative to its own
+adjacent traces, not surrounding component density; moving the whole
+footprint can't fix a constraint that's internal to it. Cleanly rejected
+by the same verify-before-keep discipline as every other stitch in this
+investigation — reverted automatically, no manual cleanup needed.
+
+**Not fab-ready. 5 pins across `U5`/`U6` remain genuinely open** —
+`U5` still has a third (already-connected) +3V3 pin so it stays
+functional; `U6` has only two +3V3 pins total and **both are
+open, meaning `U6` currently has no power connection at all** and would
+not function as populated. Closing this needs one of: growing the board
+past the 100x100mm cost-free JLCPCB tier (a real cost decision), or
+increasing `U6`'s pad copper area in its footprint so the auto-filler can
+bridge the gap (untested — the next thing to try, no fab-tier cost, but
+changes the footprint from its library default and should be checked
+against `U6`'s datasheet land pattern before use).
+
+`kicad-cli pcb drc --severity-all`: 7 violations, same accepted
+false-positive/cosmetic categories as before, zero `clearance` or
+`shorting_items`. Gerbers/drill/CPL re-exported; BOM unchanged.
+
 ## Fixed: `wisp.kicad_sym` failed to load
 
 `hardware/kicad/wisp.kicad_sym` previously had a stray top-level
