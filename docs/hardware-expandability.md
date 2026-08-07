@@ -206,3 +206,34 @@ pin 8 — the same +3V3 net, a few mm away. DRC is clean (0 violations) with
 this in place; Gerbers and drill files were regenerated.
 
 Gerbers and drill files are exported to `hardware/fab/gerbers/`.
+
+## Compact layout pass (75x80mm, down from 140x100mm)
+
+The 140x100mm layout above was far larger than the ~50x70mm target in
+`docs/concept.md` — component footprint area only accounted for ~12% of
+the board, the rest was Freerouting's generous default spacing plus edge
+real estate reserved for the 8 DNP expansion headers. A single-board
+(not stacked/split) rework followed, prioritizing hand-solderable
+footprints (no downsizing to smaller packages) and denser packing over
+absolute minimum size — target was "no wasted space, not artificially
+tiny either."
+
+Changes: all 73 footprints repositioned into tighter functional zones,
+roughly half the small passives/diodes/transistors and U1 (CH340C) moved
+to the back copper layer, re-routed from scratch with Freerouting. Result:
+75x80mm, all 44 nets routed. See `hardware/README.md` for the DRC-finding
+writeup (U3's oversized courtyard, remaining pour-stitching gaps, and the
+MH1/U3 false-positive courtyard report) — in particular, **the 26
+unconnected GND/+3V3 pour-island pads need a manual interactive-router
+pass in KiCad before this is fab-ready**; an automated straight-line
+stitching attempt was tried and reverted because it shorted nets.
+
+The ESP32-WROOM-32 antenna keepout was re-derived from Espressif's actual
+guidance (15mm clearance from the antenna specifically) rather than reused
+as-is from the original board: the imported footprint's own courtyard had
+applied that 15mm figure symmetrically around the whole module (48x41mm),
+which was contributing directly to the oversized DRC-carried through the
+compact layout — the courtyard was trimmed to the physical module body,
+and the 15mm antenna clearance now lives on its own dedicated keepout
+rule-zone above the antenna edge, matching what the original board's own
+zone (48x21mm) was already gesturing at but never explained.

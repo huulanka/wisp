@@ -105,6 +105,63 @@ Cosmetic/negligible (isolated island, not a short or missing connection to
 anything that needs it) but worth a dedicated small fix later rather than
 folding it into this pass.
 
+## Compact layout (v1, 75x80mm)
+
+The board was reworked from its original 140x100mm outline down to
+75x80mm: footprints repositioned into denser functional zones, roughly
+half the passives/small-signal parts (all 0805 R/C, Q1-Q4, D2-D10, D4, U1)
+moved to the back copper layer, and re-routed from scratch with Freerouting
+(headless: `--gui.enabled=false -mt 1` — the GUI mode gets stuck on a
+repaint exception after routing completes on this machine, and
+multi-threaded route optimization is flagged by Freerouting itself as
+"known to generate clearance violations"). All 44 nets routed (0 unrouted).
+
+**U3 (ESP32-WROOM-32) courtyard was shrunk from 48x41mm to 19x27mm.** The
+as-imported footprint's courtyard applied the Espressif-recommended 15mm
+antenna keepout symmetrically around the *entire module*, not just the
+antenna end — effectively reserving half of any sub-100mm board for the
+module alone. The 15mm clearance is real (Espressif ESP Hardware Design
+Guidelines: "at least 15mm... if the antenna cannot extend beyond the
+board, keep it at least 15mm away from other components"), but it's an
+antenna-proximity rule, not a whole-module rule. Fixed by shrinking U3's
+own courtyard to the physical module body (18x25.5mm datasheet dimension +
+assembly margin) and carrying the 15mm antenna clearance on a dedicated
+26x16mm keepout rule-zone (F.Cu+B.Cu, no tracks/vias/pads/pours/footprints)
+placed directly above the module's antenna edge instead. Non-redundant,
+same physical protection.
+
+**Known DRC finding: 26 unconnected GND/+3V3 pads (pour-fill islands)**
+
+At this density, the GND (B.Cu) and +3V3 (F.Cu) copper pours fragment into
+several small disconnected islands around tightly-packed clusters (the
+backside ESD-diode/header-support row, decoupling caps next to U5/U6,
+a few pads near J2). A first pass at auto-stitching these with straight
+pad-to-pad tracks was reverted — it drew several tracks straight through
+unrelated copper, producing real `shorting_items` violations (GND
+shorted to +3V3, /REED_IN, /EXP_IO39), which is a strictly worse outcome
+than a documented open connection. This needs the interactive router in
+the KiCad GUI (collision-aware) rather than a script — left as-is,
+tracked here rather than silently fixed. **Do not fab from this branch
+before doing that pass and re-running DRC.**
+
+**Known DRC finding: `courtyards_overlap`/`items_not_allowed` between
+MH1, MH2, and U3, positions don't actually support it**
+
+`kicad-cli pcb drc` reports `Footprint MH1, Footprint U3` courtyard
+overlap and `Footprint MH2` inside the antenna keepout on every run
+(deterministic, not intermittent like the U5 finding above). Verified
+directly via `pcbnew` that MH1 (4mm, 4mm) and U3 (58mm, 29mm) are ~55mm
+apart, and MH2 (71mm, 4mm) is 3mm clear of the keepout zone's right edge
+(68mm) — geometrically no overlap. Same category as the pre-existing
+"DRC engine noise" finding on U5 (see below): re-verify with the reported
+item positions, not just the violation count, before treating as real.
+
+**1 dangling via on `+3V3`** — a Freerouting fanout via left connected on
+only one layer after the auto-router found a more direct path. Cosmetic
+(not a short, not a missing connection), same severity class as the
+pre-existing isolated-pour-island finding below; cleanup candidate for a
+future pass.
+
 ## Fixed: `wisp.kicad_sym` failed to load
 
 `hardware/kicad/wisp.kicad_sym` previously had a stray top-level
