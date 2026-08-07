@@ -287,12 +287,76 @@ the regrown board — ~40mm apart, geometrically impossible to overlap. Same
 DRC-engine-noise category as the existing MH1/MH2/U3 finding, not a new
 defect class.
 
-**Still not fab-ready.** 13 of 26 GND/+3V3 pour islands remain genuinely
-open — floating GND references on 3 ESD diodes and floating +3V3 on 3
-decoupling/regulator pads is a real electrical gap, not cosmetic. BOM/CPL
-were re-exported (CPL positions changed with the repositioning; BOM
-unchanged — no parts added or removed). Gerbers/drill regenerated from the
-updated board.
+13 of 26 GND/+3V3 pour islands remained open after this pass — see the
+follow-up below, which closed all but 6 of those with two additional
+stitching techniques.
+
+## Layer-hop and A*-routed stitching closed 19 of the original 26 gaps
+
+Follow-up to the 100x100mm regrow above. The remaining 13 islands were
+blocked by same-layer signal traces (`/SDA2`, `/EXP_IO35`, `/EXP_IO39`,
+`/MIC_SD`, `/MIC_SCK`, `/DTR`, `+5V`, `/SDA`) that a same-layer
+nudge-and-verify can't route around without moving the blocker itself.
+Two further collision-verified techniques were applied, in order:
+
+1. **Layer-hop stitching.** Instead of nudging the blocking trace, route
+   the GND/+3V3 stitch itself onto the opposite copper layer for just the
+   segment that collides, via-hopping back down on the far side —
+   sidesteps a same-layer blocker without touching it. Verified the same
+   way as all prior stitches: KiCad's own `SHAPE_SEGMENT::Collide` against
+   every other net's copper on both layers, plus explicit hole-to-hole
+   spacing checks so via barrels don't crowd each other or existing holes.
+   Standard 0.6mm/0.3mm vias everywhere except directly under U5, which
+   reuses the existing "U5 local via size exception" DRU rule (0.45mm/0.2mm,
+   same one documented above) since standard vias don't fit U5's 0.8mm pin
+   pitch. Closed 6 islands.
+2. **A\* pathfinding.** For islands still blocked (backside diodes needing a
+   real detour around long runs like `/+5V_EXT`, which crosses most of one
+   board quadrant on F.Cu), grid-based A\* search (reusing the same
+   real-collision `PointChecker`, not a distance heuristic) found genuine
+   multi-waypoint paths around the obstruction rather than a single
+   straight or bent segment. One early A\* run routed a stitch directly
+   through U3's antenna keepout rule-area — the pathfinder's obstacle set
+   hadn't included rule areas, only tracks/pads/vias. Fixed by adding zone
+   outlines (`ZONE.Outline()`, a filled `SHAPE_POLY_SET`) to the obstacle
+   collision set for rule-area zones on the relevant layer, then re-ran
+   clean. Closed 1 more island (`D3`'s GND pad, a 12-waypoint detour around
+   the `/+5V_EXT`/`/EXP_IO39` congestion near J2).
+
+Re-running both passes repeatedly past the point of new gains is
+expected and harmless — once an island is bridged, the zone-fill
+algorithm doesn't necessarily merge its pour polygon with the main pour
+(the connection lives in the separate stitch copper, not the fill shape),
+so a re-run's island-detection still sees it as "separate" and may add a
+redundant parallel stitch to the same already-connected pad. These are
+harmless (same net, verified collision-free, just extra copper) but were
+cleaned up — 16 exact-duplicate track/via objects removed via a
+dedup pass (identical net+layer+endpoints) before final export.
+
+**Result: 6 of the original 26 gaps remain**, all on IC pins with sub-1mm
+pin pitch where standard-size vias/traces have no room to route around
+even after the board regrow:
+
+- GND: pad 2 of `D9`
+- +3V3: pads 2 and 6 of `U5` (0.8mm pitch BME680), pads 1 and 5 of `U6`
+
+Verified exhaustively — direct stitch, same-layer nudge, layer-hop, and
+A\* pathfinding (search radius up to 60mm, both 15mm- and 30mm-margin
+passes) all independently converge on the same 6 pads with zero viable
+path at any clearance. Closing these needs either a further board regrow
+(past JLCPCB's cheapest tier — a real cost tradeoff, ask before doing
+this) or hand-placed vias-in-pad / component-specific footprint changes
+for `U5`/`U6`/`D9` specifically, which needs visual review in KiCad rather
+than more scripted search.
+
+**Still not fully fab-ready**, but the remaining gap is now 5 specific
+pins on 3 components instead of a placement-density wall across the whole
+board. `kicad-cli pcb drc --severity-all` reports 7 violations, all in the
+pre-existing accepted false-positive/cosmetic categories documented above
+(MH1/MH2/J1 vs U3 courtyard-overlap noise, U5 via-size exception NPTH/PTH
+flags) — zero `clearance` or `shorting_items` findings. BOM/CPL
+re-exported (CPL positions changed; BOM unchanged). Gerbers/drill
+regenerated from the updated board.
 
 ## Fixed: `wisp.kicad_sym` failed to load
 
