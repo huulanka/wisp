@@ -212,6 +212,88 @@ only one layer after the auto-router found a more direct path. Cosmetic
 pre-existing isolated-pour-island finding below; cleanup candidate for a
 future pass.
 
+## Board grown to 100x100mm to resolve GND/+3V3 pour-stitch congestion
+
+Follow-up to the investigation above (#8/#9), which concluded the remaining
+25 of 26 unconnected GND/+3V3 pour islands needed a placement/layout change,
+not more routing cleverness, because at 75x80mm density most gaps had zero
+collision-free path at any clearance down to 0mm — direct paths physically
+overlapped other nets' copper.
+
+**Board outline grown from 75x80mm to 100x100mm.** Chosen because it's the
+largest size within JLCPCB's cheapest prototype-quantity price bracket (no
+cost increase over 75x80mm), and `docs/hardware-expandability.md` already
+noted the outline "is not final" pending a real enclosure design. All 73
+footprints were repositioned proportionally (uniform scale from the old
+75x80mm layout, preserving relative placement/functional zones), and the
+board was re-routed from scratch with Freerouting (headless), same method
+as the original compact-layout pass.
+
+**A first attempt at 85x90mm silently corrupted U3's antenna keepout
+zone.** The 26x16mm RF keepout area (see "U3 courtyard" finding above) is
+not a footprint-owned zone, so it doesn't move automatically with U3 —
+naively scaling its outline coordinates by the same factor as the
+footprints double-transformed it relative to U3's new position, producing
+a degenerate shape. `kicad-cli pcb drc` caught this as new
+`courtyards_overlap`/`npth_inside_courtyard` hits against components ~50mm
+away from U3 — geometrically impossible for a real overlap, which is what
+exposed the bug. Fixed by translating the keepout zone by U3's exact
+movement delta instead of scaling it (it's rigidly attached to U3, not
+proportional to board size). Re-routing with the corrected (harder,
+because now-correct) keepout in place initially performed *worse* (42
+unconnected vs. the corrupted version's accidental 0) — confirming the
+keepout was doing its job, not that the fix was wrong — which is why the
+board was grown further to 100x100mm rather than kept at 85x90mm.
+
+**Result at 100x100mm: 13 of the original 26 GND/+3V3 gaps remain, down
+from 25.** Freerouting reported 0 unrouted signal nets; the 13 are
+zone-fill islands on `GND`/`+3V3` pads that still don't reach the main
+pour after refill:
+
+- GND: pad 2 of `D3`, `D6`, `D9` (ESD-diode row)
+- +3V3: pad 1 of `U2`, pads 2/6 of `U5`, pad 5 of `U6` (decoupling)
+
+The same collision-checked stitching method validated in #9 (KiCad's own
+`SHAPE_SEGMENT::Collide`/`GetClearance`, minimum-spanning-tree island
+pairing, nudge-and-verify with the replacement-geometry fix already in
+place) was re-run against the regrown board and closed 2 more islands
+directly, verified with zero new `clearance`/`shorting_items` findings.
+Widening the nudge search (more offsets, more anchor fractions) found no
+further gains — the remaining 13 are blocked by multiple stacked signal
+traces (`/SDA2`, `/EXP_IO35`, `/EXP_IO39`, `/MIC_SD`, `/MIC_SCK`, `/DTR`,
+`+5V`, `/SDA`) that a single-track nudge can't route around. Closing them
+needs either further board growth past JLCPCB's cheapest tier, or manual
+rerouting of those specific nets — not more stitching.
+
+**Two real regressions introduced by the regrow, both fixed and
+re-verified:**
+
+- `D2`'s GND pad ended up partially inside U3's (correctly-positioned)
+  antenna keepout after the proportional scale. Moved `D2` 3mm clear
+  (with its one attached `/SDA2` track end moved to match) — `items_not_allowed`
+  finding resolved.
+- Freerouting placed 7 short fanout-stub tracks at 0.15mm width, below
+  the board's 0.2mm minimum. Widened to 0.2mm and re-verified no new
+  clearance collisions.
+- The fixed board title text (`wisp v1 - Andreas Bauer - 2026`, a static
+  PCB graphic, not attached to any footprint) ended up overlapping
+  `SW1`/`SW2`/`U4` silkscreen after those repositioned closer to its fixed
+  location. Moved to open board space.
+
+**Known DRC finding update: the MH1/U3 courtyard false-positive (see
+above) now also flags `J1` vs `U3`.** Re-verified directly via `pcbnew`:
+U3's courtyard spans roughly x=87-106mm, J1's spans roughly x=40-50mm on
+the regrown board — ~40mm apart, geometrically impossible to overlap. Same
+DRC-engine-noise category as the existing MH1/MH2/U3 finding, not a new
+defect class.
+
+**Still not fab-ready.** 13 of 26 GND/+3V3 pour islands remain genuinely
+open — floating GND references on 3 ESD diodes and floating +3V3 on 3
+decoupling/regulator pads is a real electrical gap, not cosmetic. BOM/CPL
+were re-exported (CPL positions changed with the repositioning; BOM
+unchanged — no parts added or removed). Gerbers/drill regenerated from the
+updated board.
+
 ## Fixed: `wisp.kicad_sym` failed to load
 
 `hardware/kicad/wisp.kicad_sym` previously had a stray top-level
