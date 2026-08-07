@@ -176,17 +176,27 @@ three are fixed now.
 
 ## PCB layout status
 
-A first-pass layout exists at `hardware/kicad/wisp.kicad_pcb`: all 69
-schematic parts are placed and DRC-clean (0 violations), with a 140x100mm
-outline, 4 M3 mounting holes, and the ESP32-WROOM-32's antenna keepout
-sitting clear near the top edge. No enclosure sketch exists yet, so the
-outline and part placement are not final — expect both to move once an
-enclosure shape is picked.
+The layout at `hardware/kicad/wisp.kicad_pcb` is fab-ready: all 69
+schematic parts are placed, all 44 signal nets are routed (Freerouting for
+the bulk pass, with a handful of tight spots finished by hand/script), and
+DRC is clean (0 violations). The board has a 140x100mm outline, 4 M3
+mounting holes, and the ESP32-WROOM-32's antenna keepout sitting clear near
+the top edge. No enclosure sketch exists yet, so the outline and part
+placement are not final — expect both to move once an enclosure shape is
+picked.
 
-GND and +3V3 are realized as copper pours (GND on the bottom layer with
-stitching vias, +3V3 on the top layer) rather than individual traces, so
-those two nets are already fully connected. The other 44 signal nets are
-still ratsnest (unrouted) — routing 44 nets collision-free on a 2-layer
-board needs either manual routing in the KiCad GUI or a real autorouter
-(e.g. Freerouting), neither of which this pass could safely automate. **The
-board is not yet fab-ready** — Gerbers weren't generated for this reason.
+GND and +3V3 are realized as copper pours (GND on the bottom layer,
++3V3 on the top layer) stitched together with vias and short traces where
+dense routing split them into islands.
+
+**Known open item:** U5 pin 2 (+3V3) is not connected. It sits in a fully
+enclosed ~0.26mm² copper pocket boxed in by its own footprint's neighboring
+pins at 0.8mm pitch — there is no legal 0.2mm-clearance path in or out, even
+after rerouting the three adjacent escape traces at multiple clearance
+settings. This is a placement-density issue (U5 needs to move, or the
+neighboring pin's escape needs to route out a different side), not
+something further auto-routing can fix. Gerbers were generated despite this
+single gap; verify U5's +3V3 pin is bridged (e.g. a bodge wire, or a
+follow-up layout revision) before assembling this rev.
+
+Gerbers and drill files are exported to `hardware/fab/gerbers/`.
