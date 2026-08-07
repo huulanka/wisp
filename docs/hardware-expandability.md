@@ -228,6 +228,14 @@ unconnected GND/+3V3 pour-island pads need a manual interactive-router
 pass in KiCad before this is fab-ready**; an automated straight-line
 stitching attempt was tried and reverted because it shorted nets.
 
+The outline was later grown again, to 100x100mm (still JLCPCB's cheapest
+prototype price bracket), specifically to relieve this congestion — see
+"Board grown to 100x100mm" and the layer-hop/A*-stitching follow-up in
+`hardware/README.md`. Combined, these closed 20 of the 26 gaps; 6 remain,
+all on sub-1mm-pitch IC pins (`U5`, `U6`, `D9`) needing hand-placed fixes
+rather than more automated routing. The outline still isn't final pending
+a real enclosure design.
+
 The ESP32-WROOM-32 antenna keepout was re-derived from Espressif's actual
 guidance (15mm clearance from the antenna specifically) rather than reused
 as-is from the original board: the imported footprint's own courtyard had
