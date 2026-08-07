@@ -209,6 +209,7 @@
 				)
 			)
 		)
+		(embedded_fonts no)
 	)
 	(symbol "CH340C"
 		(pin_names
@@ -597,6 +598,6 @@
 				)
 			)
 		)
+		(embedded_fonts no)
 	)
-	(embedded_fonts no)
 )
