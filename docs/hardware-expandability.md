@@ -189,14 +189,20 @@ GND and +3V3 are realized as copper pours (GND on the bottom layer,
 +3V3 on the top layer) stitched together with vias and short traces where
 dense routing split them into islands.
 
-**Known open item:** U5 pin 2 (+3V3) is not connected. It sits in a fully
-enclosed ~0.26mm² copper pocket boxed in by its own footprint's neighboring
-pins at 0.8mm pitch — there is no legal 0.2mm-clearance path in or out, even
-after rerouting the three adjacent escape traces at multiple clearance
-settings. This is a placement-density issue (U5 needs to move, or the
-neighboring pin's escape needs to route out a different side), not
-something further auto-routing can fix. Gerbers were generated despite this
-single gap; verify U5's +3V3 pin is bridged (e.g. a bodge wire, or a
-follow-up layout revision) before assembling this rev.
+**Resolved: U5 pin 2 (+3V3) connection.** U5's pin 2 sat in a fully enclosed
+~0.26mm² copper pocket on the top layer, boxed in by its own footprint's
+neighboring pins at 0.8mm pitch — no legal in-plane path existed. Root
+cause turned out to be worse than a single-layer clearance issue: directly
+beneath that same pocket on the bottom layer, an unrelated 40mm `/SW_OUT_CTRL`
+trace (R12 to U3 pin 31) happened to cross the exact same XY, so even a
+via-drop escape was blocked on both layers at once.
+
+Fix: rerouted the `/SW_OUT_CTRL` trace with a local dogleg to clear U5's
+footprint and its escape-trace halo (it's a single long run with no other
+constraints along that stretch, so the detour has no side effects
+elsewhere), then dropped pin 2 straight down via a via, ran a short bottom-layer
+tunnel under U5's own body, and came back up on the top layer directly into
+pin 8 — the same +3V3 net, a few mm away. DRC is clean (0 violations) with
+this in place; Gerbers and drill files were regenerated.
 
 Gerbers and drill files are exported to `hardware/fab/gerbers/`.
