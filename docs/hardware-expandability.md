@@ -155,3 +155,48 @@ above with their assigned nets, swap the status LED for a WS2812, add the
 PTC fuse on VBUS and ESD protection on the off-board-facing signals
 (second I2C, switched output, reed contact, 1-Wire, expansion header),
 then re-run ERC via the `kicad-check` skill before layout.
+
+## First physical prototype: what gets populated
+
+For the first hand-assembled prototype, only the always-on "Include" items
+are populated: test points (TP1-TP10), the PTC fuse (F1), and the ESD
+diodes (D2-D10, all off-board-facing signals). Everything under
+"Include (DNP)" above — buzzer, second I2C header, mmWave UART header,
+mic header, switched-output header (+ MOSFET/gate resistor), reed header,
+1-Wire header, analog pad header, expansion header — stays unpopulated for
+this build. `hardware/fab/wisp-bom-prototype.csv` and
+`wisp-cpl-prototype.csv` already reflect this (DNP parts excluded); the
+full BOM including DNP parts is in `wisp-bom-full.csv` for later builds.
+
+Two schematic DNP flags were corrected while wiring this up: F1 and
+TP1-TP10 had been marked DNP even though the decision table above lists
+them as always-populated "Include" items, and one of the ESD diodes (D10,
+covering `EXP_IO39`) was missed when the other seven were added — all
+three are fixed now.
+
+## PCB layout status
+
+The layout at `hardware/kicad/wisp.kicad_pcb` is fab-ready: all 69
+schematic parts are placed, all 44 signal nets are routed (Freerouting for
+the bulk pass, with a handful of tight spots finished by hand/script), and
+DRC is clean (0 violations). The board has a 140x100mm outline, 4 M3
+mounting holes, and the ESP32-WROOM-32's antenna keepout sitting clear near
+the top edge. No enclosure sketch exists yet, so the outline and part
+placement are not final — expect both to move once an enclosure shape is
+picked.
+
+GND and +3V3 are realized as copper pours (GND on the bottom layer,
++3V3 on the top layer) stitched together with vias and short traces where
+dense routing split them into islands.
+
+**Known open item:** U5 pin 2 (+3V3) is not connected. It sits in a fully
+enclosed ~0.26mm² copper pocket boxed in by its own footprint's neighboring
+pins at 0.8mm pitch — there is no legal 0.2mm-clearance path in or out, even
+after rerouting the three adjacent escape traces at multiple clearance
+settings. This is a placement-density issue (U5 needs to move, or the
+neighboring pin's escape needs to route out a different side), not
+something further auto-routing can fix. Gerbers were generated despite this
+single gap; verify U5's +3V3 pin is bridged (e.g. a bodge wire, or a
+follow-up layout revision) before assembling this rev.
+
+Gerbers and drill files are exported to `hardware/fab/gerbers/`.
