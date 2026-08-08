@@ -1,15 +1,18 @@
 (version 1)
 
-# U5 (BME680, LGA-8, 0.8mm pitch) is too tight for the board-wide 0.6mm
-# minimum via diameter: a 0.6mm via cannot clear neighboring pads at 0.8mm
-# pitch without sitting on top of one of them. This exception allows a
-# smaller via (0.45mm dia / 0.2mm drill, still within JLCPCB standard
-# capability) only for vias placed under U5's own courtyard, so the +3V3
-# via feeding pin 2 can sit off-pad instead of via-in-pad. See
-# hardware/README.md for the full writeup and the two known,
-# reviewed-as-acceptable clearance shortfalls this leaves under U5.
-(rule "U5 local via size exception"
-	(condition "A.insideCourtyard('U5')")
-	(constraint via_diameter (min 0.4mm))
-	(constraint hole_size (min 0.2mm))
-)
+# No project-local design-rule exceptions are currently needed.
+#
+# This file previously carried a "U5 local via size exception" that allowed
+# 0.45mm/0.20mm vias inside U5's (BME680, LGA-8, 0.8mm pitch) courtyard,
+# because on the old 2-layer layout the +3V3 pin could only be reached by a
+# via that did not fit at board-standard 0.6mm.
+#
+# That exception is obsolete since the board moved to a 4-layer stackup:
+# +3V3 is now a solid inner plane (In2.Cu), so U5's power pins are bonded
+# straight down to it with ordinary 0.6mm/0.3mm vias placed off-pad next to
+# the part. Every via on the board is now 0.6mm/0.3mm, i.e. at or above the
+# board-wide minimum, so no exception applies.
+#
+# Keep the file: `kicad-cli` picks up `.kicad_dru` by path, so running the
+# checks against the project directory (rather than a detached copy of
+# `.kicad_pcb`) stays the correct habit if a rule is ever added back.
