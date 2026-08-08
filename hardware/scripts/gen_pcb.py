@@ -729,7 +729,9 @@ def stage_silk():
     stop resolving types for the rest of the process after any Remove().
     """
     board = pcbnew.LoadBoard(PCB)
-    SILK_GAP = 0.16
+    # JLCPCB's stated minimum silkscreen-to-pad/hole clearance is 0.15mm; kept
+    # at a bit above it rather than run exactly on the published floor.
+    SILK_GAP = 0.2
 
     pads = []
     for fp in board.GetFootprints():
@@ -738,6 +740,18 @@ def stage_silk():
             pads.append((bb.GetX() / MM - SILK_GAP, bb.GetY() / MM - SILK_GAP,
                          (bb.GetX() + bb.GetWidth()) / MM + SILK_GAP,
                          (bb.GetY() + bb.GetHeight()) / MM + SILK_GAP))
+
+    # Vias are not footprint pads and were previously invisible to this
+    # search entirely -- reference designators routinely landed right on top
+    # of one (JLCPCB's DFM flagged ~70 silkscreen-to-hole violations from
+    # exactly this). Every via on the board is VIA_D/VIA_DRILL, so a single
+    # radius covers all of them.
+    via_r = VIA_D / 2
+    for t in board.GetTracks():
+        if t.GetClass() == "PCB_VIA":
+            vx, vy = t.GetPosition().x / MM, t.GetPosition().y / MM
+            pads.append((vx - via_r - SILK_GAP, vy - via_r - SILK_GAP,
+                         vx + via_r + SILK_GAP, vy + via_r + SILK_GAP))
     pad_index = _index(pads)
 
     edges = []
@@ -805,9 +819,17 @@ def stage_silk():
             continue
         ref.SetLayer(pcbnew.F_SilkS)
         ref.SetTextSize(pcbnew.VECTOR2I(mm(0.8), mm(0.8)))
-        ref.SetTextThickness(mm(0.12))
-        w = len(fp.GetReference()) * 0.62 + 0.3
-        h = 1.0
+        # JLCPCB's stated minimum silkscreen line (stroke) width is 0.15mm;
+        # 0.12mm was flagged as a manufacturability warning on every ref.
+        ref.SetTextThickness(mm(0.15))
+        # Query KiCad's own rendered bounding box rather than estimate one:
+        # a hand-rolled "0.62mm/char" formula undershot the real box by up to
+        # 0.48mm in width and a consistent 0.36mm in height (font metrics
+        # aren't linear in character count), which is what let designators
+        # land closer to neighbouring pads/vias than this search believed.
+        ref.SetPosition(vec(0, 0))
+        tb = ref.GetBoundingBox()
+        w, h = tb.GetWidth() / MM, tb.GetHeight() / MM
         r = abs_rect(fp)
         cx, cy = (r[0] + r[2]) / 2, (r[1] + r[3]) / 2
         spot = None
