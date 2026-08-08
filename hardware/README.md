@@ -53,6 +53,15 @@ The consequence worth remembering: a power pad can now only be unconnected
 if its via is missing, which DRC reports directly as an unconnected item.
 There is no longer such a thing as a "pour island" to hunt for.
 
+**Watch the DNP flags when assigning decoupling.** `C11` is marked DNP in
+the schematic (it belongs to the optional expansion block, not to a core
+IC). An automated "put each cap next to the pin it serves" pass happily
+assigned it to U3, which would have shipped the ESP32 with no populated
+local bypass while the SCD41 got two. The populated 100nF caps are C1, C2,
+C8, C9, C10 and they map to U1, U3, U5, U4, U6 respectively — one per IC.
+If you re-run any placement automation, exclude DNP parts from the
+decoupling assignment or re-check this mapping afterwards.
+
 Two fine-pitch parts needed narrower escapes than the 0.4mm default stub:
 `U6` (BH1750, WSOF-6, 0.5mm pitch) and `U5` (BME680, LGA-8, 0.8mm pitch) use
 0.20-0.21mm stubs, which still clear the 0.20mm rule. Everything else uses
