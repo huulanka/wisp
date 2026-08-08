@@ -3,3 +3,7 @@ hardware/kicad/.history/
 hardware/kicad/*.lck
 hardware/kicad/*.kicad_prl
 hardware/kicad/*.net
+
+# Python bytecode from hardware/scripts
+__pycache__/
+*.pyc

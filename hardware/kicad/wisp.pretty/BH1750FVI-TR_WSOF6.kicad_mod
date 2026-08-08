@@ -3,7 +3,7 @@
 	(generator "wisp")
 	(generator_version "10.0")
 	(layer "F.Cu")
-	(descr "ROHM BH1750FVI-TR, WSOF6 package, 0.5mm pitch. DRAFT footprint derived from datasheet text extraction (ROHM BH1750FVI Technical Note Rev.C, p.17) -- verify pad geometry against the mechanical drawing before ordering PCBA.")
+	(descr "ROHM BH1750FVI-TR, WSOF6 package, 0.5mm pitch. DRAFT footprint derived from datasheet TEXT extraction, pad geometry NOT verified against the mechanical drawing (ROHM BH1750FVI Technical Note Rev.C, p.17) -- verify pad geometry against the mechanical drawing before ordering PCBA.")
 	(tags "BH1750 WSOF6 ambient light sensor DRAFT-VERIFY")
 	(attr smd)
 	(property "Reference" "REF**"
@@ -40,4 +40,28 @@
 	(pad "4" smd rect (at 0.5 0.9) (size 0.3 0.4) (layers "F.Cu" "F.Paste" "F.Mask"))
 	(pad "5" smd rect (at 0 0.9) (size 0.3 0.4) (layers "F.Cu" "F.Paste" "F.Mask"))
 	(pad "6" smd rect (at -0.5 0.9) (size 0.3 0.4) (layers "F.Cu" "F.Paste" "F.Mask"))
+	(fp_line
+		(start -1.05 -1.0)
+		(end 1.05 -1.0)
+		(stroke (width 0.05) (type solid))
+		(layer "F.CrtYd")
+	)
+	(fp_line
+		(start 1.05 -1.0)
+		(end 1.05 1.0)
+		(stroke (width 0.05) (type solid))
+		(layer "F.CrtYd")
+	)
+	(fp_line
+		(start 1.05 1.0)
+		(end -1.05 1.0)
+		(stroke (width 0.05) (type solid))
+		(layer "F.CrtYd")
+	)
+	(fp_line
+		(start -1.05 1.0)
+		(end -1.05 -1.0)
+		(stroke (width 0.05) (type solid))
+		(layer "F.CrtYd")
+	)
 )
