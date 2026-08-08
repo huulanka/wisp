@@ -9,10 +9,13 @@ frozen spec — see "Open questions" for items still needing a decision.
 
 - ESP32-WROOM-32 (certified module, no custom RF/antenna design)
 - USB-C for power and programming only, no battery path
-- CH340C USB-UART bridge with standard auto-reset circuit (DTR/RTS via a
-  BJT onto EN/IO0)
-- AP63203WU buck regulator, 5V -> 3.3V, 2.2uH inductor (datasheet-recommended
-  value for the regulator's 3A rating)
+- (Rev A) CH340C USB-UART bridge with an auto-reset circuit. Removed in Rev B:
+  the ESP32-S3 has native USB, so the bridge, its decoupling and both
+  auto-reset transistors are gone.
+- AP63203WU buck regulator, 5V -> 3.3V, 2.2uH inductor. Note the part is the
+  **2A** AP6320x, not 3A — an earlier revision of this document said 3A, which
+  is the AP6330x. 2.2uH is inside the datasheet's recommended 2.2-10uH band,
+  and 2A is still ~3x the worst-case load below.
 - I2C sensor trio on one bus: SCD41 (CO2/temp/humidity, 0x62), BME680 (VOC,
   0x76/0x77), BH1750 (lux, 0x23)
 - Single status LED, boot/reset buttons
@@ -65,16 +68,16 @@ estimates:
 
 | Load | Peak current |
 |---|---|
-| ESP32 WiFi TX burst | ~240 mA |
+| ESP32-S3 WiFi TX burst | ~350 mA |
 | SCD41 measurement peak (~1s) | ~205 mA |
 | BME680 heater peak | ~20 mA |
 | WS2812 at full white | ~60 mA |
 | LD2410 mmWave | ~100 mA |
 | INMP441 microphone | ~1.5 mA |
 | Buzzer active | ~30 mA |
-| **Total worst case** | **~650 mA** |
+| **Total worst case** | **~760 mA** |
 
-The AP63203WU is rated for 3000 mA — roughly 4.5x headroom over the
+The AP63203WU is rated for 2000 mA — roughly 2.6x headroom over the
 worst realistic case, so no regulator change is needed even with every
 DNP option populated and active at once. 5V input current in that
 scenario (~480 mA at ~90% efficiency) also stays within what a
@@ -89,7 +92,10 @@ above:
   essentially free. Popular for external/waterproof temperature probes
   (outdoor, water tank, etc.), complements the I2C-only sensor story
   without adding a real bus. **Recommendation: include as DNP.**
-- **PTC resettable fuse on the VBUS input** — now that the board grows a
+- **PTC resettable fuse on the externally-exposed 5V pins** (as built it sits
+  on `+5V_EXT`, feeding J3/J5 and the status LED, not on the board's own VBUS
+  input — a 500mA fuse in the main path would nuisance-trip at ~480mA input
+  current). Originally written up as — now that the board grows a
   number of off-board connectors (switched output, reed contact, second
   I2C bus, expansion header), a fuse protects both the board and the
   upstream USB port from a wiring mistake on any of them. Cheap,
@@ -110,138 +116,92 @@ above:
 - **RS485/Modbus transceiver footprint**: too much of a stretch for a
   home climate monitor without a concrete use case. Not added.
 
-## GPIO pin plan
+## GPIO pin plan (ESP32-S3-WROOM-1)
 
-Read from the actual schematic netlist (`hardware/kicad/wisp.kicad_sch`,
-component `U3`), not guessed, to avoid collisions.
+Rewritten for the S3. The WROOM-32 plan that used to live here is gone with
+the part; nothing below is a rename of an old assignment, because the S3's
+pin numbering, strapping pins and USB handling are all different.
 
-**Already committed by the base design:**
+Read from `hardware/scripts/wisp_netlist.py`, which is the actual source of
+the netlist, not from a hand-kept copy that can drift.
+
+**Committed by the base design:**
 
 | Pin | Function |
 |---|---|
-| IO1 / IO3 | UART0 TX/RX — CH340C programming interface |
-| EN, IO0 | Reset / boot mode strapping |
-| IO21, IO22 | SDA, SCL — onboard I2C bus (SCD41, BME680, BH1750) |
-| IO2 | Status LED (becomes the WS2812 data line, see decisions above) |
+| USB_D+ / USB_D- | native USB to J1, via the USBLC6 ESD array. No bridge chip. |
+| TXD0 / RXD0 (IO43/IO44) | UART0, broken out to TP11/TP12 only |
+| EN, IO0 | reset / boot strapping, with buttons SW1/SW2 |
+| IO8, IO9 | SDA, SCL — onboard sensor bus (SCD41, SGP41, BME280, BH1750) |
+| IO7 | WS2812B status LED data |
 
-**Never route anything here:** pads for `SCK/CLK`, `SCS/CMD`, `SDI/SD1`,
-`SDO/SD0`, `SHD/SD2`, `SWP/SD3` (GPIO6-11) exist on the module footprint
-but are internally wired to the WROOM-32's embedded SPI flash. Using them
-for anything else will break the module.
-
-**New DNP assignments:**
+**DNP expansion assignments:**
 
 | Pin(s) | Feature | Notes |
 |---|---|---|
-| IO12, IO13, IO14, IO15 | JTAG testpads (MTDI/MTCK/MTMS/MTDO) | Pads only, no connector. These are also strapping pins — keep unloaded in normal operation. |
-| IO16, IO17 | Second I2C bus (SDA2/SCL2) | Own pull-ups, isolated from the internal sensor bus. |
-| IO4, IO5 | mmWave UART (TX/RX to LD2410) | Routed via a spare HW UART, no conflict with the CH340 programming UART. |
-| IO25, IO26, IO27 | I2S microphone (SCK, WS, SD) | ADC2-capable pins, but unused as ADC here — no WiFi conflict since these are pure digital I2S signals. |
-| IO19 | Switched DC output (MOSFET gate) | |
-| IO18 | Piezo buzzer | |
-| IO23 | Reed/Hall contact input | Uses the ESP32's internal pull-up, no external resistor needed. |
-| IO32 | 1-Wire bus (e.g. DS18B20) | Needs an external pull-up (~4.7k) for proper open-drain operation with multiple devices. |
-| VP / IO36 | ADC analog pad | True input-only ADC1 channel — ideal for an analog sensor pad, no WiFi/ADC2 conflict. |
-| IO33, IO34, IO35, VN / IO39 | Generic expansion header (+ 3V3, GND) | All four are also ADC1-capable, so the expansion header doubles as extra analog inputs if needed later. |
+| IO4 | ADC analog pad | ADC1_CH3. ADC1 is IO1-IO10 on the S3; ADC2 is unusable while WiFi runs, same as before. |
+| IO5 | 1-Wire bus | external 4.7k pull-up on the bus side of the series resistor |
+| IO6 | Reed/Hall contact input | |
+| IO15 | Piezo buzzer | |
+| IO16 | Switched DC output (MOSFET gate) | |
+| IO17, IO18 | Second I2C bus (SDA2/SCL2) | own pull-ups |
+| IO10, IO11 | mmWave UART to LD2410 | IO10 is the ESP32's TX (module RX), IO11 its RX |
+| IO12, IO13, IO14 | I2S microphone (SCK, WS, SD) | |
+| IO1, IO2, IO21, IO38, IO47, IO48 | Generic expansion header J9 | IO1/IO2 are ADC1-capable; the S3 has no input-only pins, so unlike the WROOM-32 header every one of these is bidirectional |
+| IO39, IO40, IO41, IO42 | JTAG test pads (MTCK/MTDO/MTDI/MTMS) | Pads only. Kept as a fallback for the case where USB itself is what needs debugging — the S3's built-in USB-Serial-JTAG covers the normal case. |
 
-Every currently-unused GPIO on the module is accounted for — nothing is
-left both unassigned and unbroken-out, so there's no pin left over that
-would need a later, undocumented decision.
+**Left unconnected on purpose:**
 
-## Next step
+| Pin | Why |
+|---|---|
+| IO3 | strapping (JTAG source select) |
+| IO45 | strapping (VDD_SPI voltage). Internal pull-down selects 3.3V flash. |
+| IO46 | strapping (ROM message printing), internal pull-down |
+| IO35, IO36, IO37 | used for octal PSRAM on `-R8` module variants. Left free so the board also accepts those parts. The BOM specifies `-N8` (8MB flash, no PSRAM). |
 
-Pin plan is settled. Next: update the schematic — add the DNP footprints
-above with their assigned nets, swap the status LED for a WS2812, add the
-PTC fuse on VBUS and ESD protection on the off-board-facing signals
-(second I2C, switched output, reed contact, 1-Wire, expansion header),
-then re-run ERC via the `kicad-check` skill before layout.
+**The WROOM-32 flash-voltage trap is gone.** On the old part, MTDI/IO12 was the
+strapping pin that selects flash voltage, so attaching a JTAG probe with a
+pull-up on TDI at power-up booted the module into 1.8V flash mode. On the S3
+that role belongs to IO45, which is not broken out, so the JTAG pads carry no
+strapping function at all and need no pull-down.
 
-## First physical prototype: what gets populated
+**Never route anything to the flash pins.** GPIO26-32 are wired to the
+module's internal SPI flash and are not brought out on the WROOM-1 footprint.
 
-For the first hand-assembled prototype, only the always-on "Include" items
-are populated: test points (TP1-TP10), the PTC fuse (F1), and the ESD
-diodes (D2-D10, all off-board-facing signals). Everything under
-"Include (DNP)" above — buzzer, second I2C header, mmWave UART header,
-mic header, switched-output header (+ MOSFET/gate resistor), reed header,
-1-Wire header, analog pad header, expansion header — stays unpopulated for
-this build. `hardware/fab/wisp-bom-prototype.csv` and
-`wisp-cpl-prototype.csv` already reflect this (DNP parts excluded); the
-full BOM including DNP parts is in `wisp-bom-full.csv` for later builds.
+## Status
 
-Two schematic DNP flags were corrected while wiring this up: F1 and
-TP1-TP10 had been marked DNP even though the decision table above lists
-them as always-populated "Include" items, and one of the ESD diodes (D10,
-covering `EXP_IO39`) was missed when the other seven were added — all
-three are fixed now.
+Rev A (ESP32-WROOM-32, BME680) was fabricated-ready but never ordered. Rev B
+supersedes it: ESP32-S3 with native USB, SGP41 + BME280 in place of the
+BME680, and a design review's worth of fixes (see `hardware/README.md`).
 
-## PCB layout status
+**Rev B is DRC clean**: 0 violations, 0 unconnected items, 0 schematic-parity
+errors, on a 60 x 80mm 4-layer board with all 91 parts on the front. ERC has
+one accepted warning (the BME280's address strap).
 
-The layout at `hardware/kicad/wisp.kicad_pcb` is fab-ready: all 69
-schematic parts are placed, all 44 signal nets are routed (Freerouting for
-the bulk pass, with a handful of tight spots finished by hand/script), and
-DRC is clean (0 violations). The board has a 140x100mm outline, 4 M3
-mounting holes, and the ESP32-WROOM-32's antenna keepout sitting clear near
-the top edge. No enclosure sketch exists yet, so the outline and part
-placement are not final — expect both to move once an enclosure shape is
-picked.
+The schematic and PCB are now **generated from committed sources**
+(`hardware/scripts/`). Rev A's were produced by throwaway scripts that were
+never committed — the reason nobody could tell how that board had been built.
 
-GND and +3V3 are realized as copper pours (GND on the bottom layer,
-+3V3 on the top layer) stitched together with vias and short traces where
-dense routing split them into islands.
+### What gets populated on the first prototype
 
-**Resolved: U5 pin 2 (+3V3) connection.** U5's pin 2 sat in a fully enclosed
-~0.26mm² copper pocket on the top layer, boxed in by its own footprint's
-neighboring pins at 0.8mm pitch — no legal in-plane path existed. Root
-cause turned out to be worse than a single-layer clearance issue: directly
-beneath that same pocket on the bottom layer, an unrelated 40mm `/SW_OUT_CTRL`
-trace (R12 to U3 pin 31) happened to cross the exact same XY, so even a
-via-drop escape was blocked on both layers at once.
+Only the always-on "Include" items: the four sensors, the regulator, the
+module, the USB front end incl. the USBLC6 ESD array, test points TP1-TP13,
+the PTC fuse F1, the ESD diodes on all off-board-facing signals, their series
+resistors, and both LEDs. Everything under "Include (DNP)" — buzzer, second
+I2C header, mmWave UART, mic header, switched-output header with its MOSFET,
+reed header, 1-Wire header, analog pad, expansion header — stays unpopulated.
 
-Fix: rerouted the `/SW_OUT_CTRL` trace with a local dogleg to clear U5's
-footprint and its escape-trace halo (it's a single long run with no other
-constraints along that stretch, so the detour has no side effects
-elsewhere), then dropped pin 2 straight down via a via, ran a short bottom-layer
-tunnel under U5's own body, and came back up on the top layer directly into
-pin 8 — the same +3V3 net, a few mm away. DRC is clean (0 violations) with
-this in place; Gerbers and drill files were regenerated.
+`hardware/fab/wisp-bom-prototype.csv` (69 parts) and `wisp-cpl-prototype.csv`
+(56 placements) reflect that; `wisp-bom-full.csv` (87 parts) includes the DNP
+parts for later builds.
 
-Gerbers and drill files are exported to `hardware/fab/gerbers/`.
+### Still open before ordering
 
-## Compact layout pass (75x80mm, down from 140x100mm)
-
-The 140x100mm layout above was far larger than the ~50x70mm target in
-`docs/concept.md` — component footprint area only accounted for ~12% of
-the board, the rest was Freerouting's generous default spacing plus edge
-real estate reserved for the 8 DNP expansion headers. A single-board
-(not stacked/split) rework followed, prioritizing hand-solderable
-footprints (no downsizing to smaller packages) and denser packing over
-absolute minimum size — target was "no wasted space, not artificially
-tiny either."
-
-Changes: all 73 footprints repositioned into tighter functional zones,
-roughly half the small passives/diodes/transistors and U1 (CH340C) moved
-to the back copper layer, re-routed from scratch with Freerouting. Result:
-75x80mm, all 44 nets routed. See `hardware/README.md` for the DRC-finding
-writeup (U3's oversized courtyard, remaining pour-stitching gaps, and the
-MH1/U3 false-positive courtyard report) — in particular, **the 26
-unconnected GND/+3V3 pour-island pads need a manual interactive-router
-pass in KiCad before this is fab-ready**; an automated straight-line
-stitching attempt was tried and reverted because it shorted nets.
-
-The outline was later grown again, to 100x100mm (still JLCPCB's cheapest
-prototype price bracket), specifically to relieve this congestion — see
-"Board grown to 100x100mm" and the layer-hop/A*-stitching follow-up in
-`hardware/README.md`. Combined, these closed 20 of the 26 gaps; 6 remain,
-all on sub-1mm-pitch IC pins (`U5`, `U6`, `D9`) needing hand-placed fixes
-rather than more automated routing. The outline still isn't final pending
-a real enclosure design.
-
-The ESP32-WROOM-32 antenna keepout was re-derived from Espressif's actual
-guidance (15mm clearance from the antenna specifically) rather than reused
-as-is from the original board: the imported footprint's own courtyard had
-applied that 15mm figure symmetrically around the whole module (48x41mm),
-which was contributing directly to the oversized DRC-carried through the
-compact layout — the courtyard was trimmed to the physical module body,
-and the 15mm antenna clearance now lives on its own dedicated keepout
-rule-zone above the antenna edge, matching what the original board's own
-zone (48x21mm) was already gesturing at but never explained.
+1. **The BH1750 footprint is unverified.** Its pad geometry came from
+   datasheet text, and ROHM's mechanical drawing could not be retrieved to
+   check it. Print 1:1 and compare, or replace the footprint.
+2. **No LCSC part numbers** except the USBLC6. Every part has an MPN,
+   manufacturer and rating; LCSC numbers were not guessed, because a wrong one
+   silently orders the wrong part.
+3. **Narrowing the planes at the sensor-tab neck** would improve thermal
+   isolation further. Deliberately not done blind during the Rev B rework.

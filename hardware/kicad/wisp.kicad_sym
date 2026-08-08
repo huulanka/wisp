@@ -211,7 +211,8 @@
 		)
 		(embedded_fonts no)
 	)
-	(symbol "CH340C"
+
+	(symbol "SGP41"
 		(pin_names
 			(offset 0.254)
 		)
@@ -221,26 +222,28 @@
 		(in_pos_files yes)
 		(duplicate_pin_numbers_are_jumpers no)
 		(property "Reference" "U"
-			(at 0 17.78 0)
+			(at 0 12.7 0)
 			(show_name no)
 			(do_not_autoplace no)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Value" "CH340C"
-			(at 0 -17.78 0)
+		(property "Value" "SGP41"
+			(at 0 -12.7 0)
 			(show_name no)
 			(do_not_autoplace no)
+			(hide yes)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Footprint" "Package_SO:SOIC-16_3.9x9.9mm_P1.27mm"
+		(property "Footprint" "wisp:Sensirion_DFN-6-1EP_2.44x2.44mm_P0.8mm_EP1.25x1.7mm"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -251,7 +254,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.wch-ic.com/downloads/CH340DS1_PDF.html"
+		(property "Datasheet" "https://sensirion.com/media/documents/5FE8673C/61E96F50/Sensirion_Gas_Sensors_Datasheet_SGP41.pdf"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -262,7 +265,7 @@
 				)
 			)
 		)
-		(property "Description" "USB to UART bridge, integrated clock (no external crystal), SOP-16"
+		(property "Description" "Sensirion SGP41 VOC and NOx gas sensor, I2C 0x59, DFN-6 with exposed pad. VDD needs a 4.7R series resistor and 1uF; VDDH needs its own 1uF."
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -273,7 +276,7 @@
 				)
 			)
 		)
-		(property "ki_keywords" "USB UART serial bridge"
+		(property "ki_keywords" "gas sensor VOC NOx air quality I2C sensirion"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -284,7 +287,7 @@
 				)
 			)
 		)
-		(property "ki_fp_filters" "SOIC*3.9x9.9*"
+		(property "ki_fp_filters" "Sensirion*DFN*6*"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -295,10 +298,10 @@
 				)
 			)
 		)
-		(symbol "CH340C_0_1"
+		(symbol "SGP41_0_1"
 			(rectangle
-				(start -10.16 15.24)
-				(end 10.16 -15.24)
+				(start -7.62 10.16)
+				(end 7.62 -10.16)
 				(stroke
 					(width 0.254)
 					(type default)
@@ -308,29 +311,11 @@
 				)
 			)
 		)
-		(symbol "CH340C_1_1"
+		(symbol "SGP41_1_1"
 			(pin power_in line
-				(at -12.7 12.7 0)
+				(at -2.54 12.7 270)
 				(length 2.54)
-				(name "VCC"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(number "16"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-			)
-			(pin power_in line
-				(at -12.7 -12.7 0)
-				(length 2.54)
-				(name "GND"
+				(name "VDD"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -346,63 +331,9 @@
 				)
 			)
 			(pin power_in line
-				(at -12.7 10.16 0)
+				(at 2.54 12.7 270)
 				(length 2.54)
-				(name "V3"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(number "4"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-			)
-			(pin output line
-				(at 12.7 7.62 180)
-				(length 2.54)
-				(name "TXD"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(number "2"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-			)
-			(pin input line
-				(at 12.7 5.08 180)
-				(length 2.54)
-				(name "RXD"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(number "3"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-			)
-			(pin passive line
-				(at 12.7 -2.54 180)
-				(length 2.54)
-				(name "UD+"
+				(name "VDDH"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -417,17 +348,17 @@
 					)
 				)
 			)
-			(pin passive line
-				(at 12.7 -5.08 180)
+			(pin power_in line
+				(at -2.54 -12.7 90)
 				(length 2.54)
-				(name "UD-"
+				(name "VSS"
 					(effects
 						(font
 							(size 1.27 1.27)
 						)
 					)
 				)
-				(number "6"
+				(number "2"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -435,10 +366,28 @@
 					)
 				)
 			)
-			(pin no_connect line
-				(at -12.7 5.08 0)
+			(pin passive line
+				(at 2.54 -12.7 90)
 				(length 2.54)
-				(name "NC"
+				(name "NC_GND"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "4"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 0.0 -12.7 90)
+				(length 2.54)
+				(name "EP"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -453,17 +402,17 @@
 					)
 				)
 			)
-			(pin output line
-				(at -12.7 2.54 0)
+			(pin bidirectional line
+				(at -10.16 2.54 0)
 				(length 2.54)
-				(name "OUT#"
+				(name "SDA"
 					(effects
 						(font
 							(size 1.27 1.27)
 						)
 					)
 				)
-				(number "8"
+				(number "3"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -472,124 +421,16 @@
 				)
 			)
 			(pin input line
-				(at 12.7 2.54 180)
+				(at -10.16 -2.54 0)
 				(length 2.54)
-				(name "CTS#"
+				(name "SCL"
 					(effects
 						(font
 							(size 1.27 1.27)
 						)
 					)
 				)
-				(number "9"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-			)
-			(pin input line
-				(at 12.7 0 180)
-				(length 2.54)
-				(name "DSR#"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(number "10"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-			)
-			(pin input line
-				(at 12.7 -7.62 180)
-				(length 2.54)
-				(name "RI#"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(number "11"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-			)
-			(pin input line
-				(at 12.7 -10.16 180)
-				(length 2.54)
-				(name "DCD#"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(number "12"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-			)
-			(pin output line
-				(at -12.7 -2.54 0)
-				(length 2.54)
-				(name "DTR#"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(number "13"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-			)
-			(pin output line
-				(at -12.7 -5.08 0)
-				(length 2.54)
-				(name "RTS#"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(number "14"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-			)
-			(pin input line
-				(at -12.7 -7.62 0)
-				(length 2.54)
-				(name "R232"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(number "15"
+				(number "6"
 					(effects
 						(font
 							(size 1.27 1.27)

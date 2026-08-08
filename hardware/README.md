@@ -1,20 +1,74 @@
 # hardware
 
 KiCad project for the Wisp board. See `/hardware/kicad` for schematic/PCB
-source, `/hardware/fab` for exported Gerbers/drill/BOM/CPL.
+source, `/hardware/scripts` for the generators that produce them, and
+`/hardware/fab` for exported Gerbers/drill/BOM/CPL.
 
 Board: **60 x 80 mm, 4 layers**, single-sided assembly (all parts on F.Cu).
+
+## The design is generated, not hand-drawn
+
+This is the most important thing to know before touching anything here.
+
+| File | Role |
+|---|---|
+| `scripts/wisp_netlist.py` | **The design.** Every part, value, footprint, MPN and net. |
+| `scripts/wisp_floorplan.py` | **The placement.** Fixed positions for the parts whose location is a decision; anchors for everything else. Also the board outline. |
+| `scripts/gen_schematic.py` | builds `wisp.kicad_sch` |
+| `scripts/gen_pcb.py` | builds `wisp.kicad_pcb`, in stages |
+
+Edit the data, re-run the generators. **Do not hand-edit `wisp.kicad_sch`** —
+it is overwritten. Rev A's schematic was produced by a throwaway script that
+was never committed, which is why by Rev B nobody could reconstruct how it had
+been built. That is the problem these two files exist to prevent.
+
+```
+python3 hardware/scripts/gen_schematic.py
+
+KI=/Applications/KiCad/KiCad.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3
+for s in strip outline build bond fill; do $KI hardware/scripts/gen_pcb.py $s; done
+# ... route (see below) ...
+for s in close join polish silk fill; do $KI hardware/scripts/gen_pcb.py $s; done
+```
+
+The PCB generator runs as **separate processes per stage on purpose**. pcbnew's
+SWIG bindings stop resolving types for the rest of the interpreter once
+anything has been `Remove()`d from the board — zones come back as raw
+`SwigPyObject`, `GetTracks()` stops being iterable, `FootprintLoad()` breaks,
+and some combinations segfault outright. Every stage therefore does its reads
+first, its deletions last, and hands off through the file.
+
+### Stages
+
+| Stage | Does |
+|---|---|
+| `strip` | resets the antenna keepout and the zone outlines, then deletes all copper and footprints |
+| `outline` | rewrites Edge.Cuts from `wisp_floorplan.OUTLINE` (plain text — it both deletes and creates) |
+| `build` | places all 91 footprints and assigns every net from the schematic netlist |
+| `bond` | gives each SMD power pad its own via to its plane, plus a GND stitching grid |
+| `fill` | refills all five zones |
+| `close` | deletes vias/tracks the router left dangling; run until it reports none |
+| `join` | closes any connection the router left open, with a collision-checked A* |
+| `polish` | widens anything below the 0.15mm minimum track width |
+| `silk` | makes the silkscreen manufacturable (see below) |
 
 ## Validating the design
 
 ```
-kicad-cli sch erc --output erc.json --format json hardware/kicad/wisp.kicad_sch
+kicad-cli sch erc --severity-all --format json --output erc.json hardware/kicad/wisp.kicad_sch
 kicad-cli pcb drc --severity-all --format json --output drc.json hardware/kicad/wisp.kicad_pcb
 ```
 
 Run these against the project directory, not against a copy of
 `wisp.kicad_pcb` somewhere else: `kicad-cli` only picks up
-`wisp.kicad_dru` (project-local design-rule exceptions) by path.
+`wisp.kicad_dru` and `wisp.kicad_pro` by path, and the project file is where
+the design rules live.
+
+`gen_schematic.py` additionally refuses to emit anything unless every net
+references a pin that exists, every footprint file resolves, and **every pin
+of every part is claimed by exactly one net or explicitly listed in
+`NO_CONNECT`**. That last check is what stops a forgotten pin from quietly
+becoming an unrouted net three stages later.
 
 ## Stackup
 
@@ -30,228 +84,239 @@ Specctra DSN handed to the autorouter declares them `(type power)` so the
 router cannot cut them; if you re-export the DSN, re-apply that patch, since
 KiCad exports all four layers as `(type signal)` by default.
 
-**Why 4 layers.** The board carries a 2.4GHz radio and a switching
-regulator. On the previous 2-layer version, B.Cu had to be both "the ground
-plane" and a routing layer at the same time, so ~1.4m of signal traces plus
-40 backside parts cut the plane into fragments — and +3V3 was a second pour
-competing for F.Cu. That is the direct cause of the long-running
-"unconnected GND/+3V3 pour island" findings (issue #8): the power nets
-depended on pours squeezing between signal traces, and at some pins no legal
-path existed at any clearance. A dedicated plane per power net removes that
-failure mode structurally rather than patching it. At JLCPCB prototype
-quantities a 4-layer 60x80mm board is a few dollars over 2-layer.
+## Power distribution
 
-## Power distribution: every power pad is bonded to its plane
+Every **surface-mount** `+3V3`/`GND` pad gets its own short stub and via
+straight down to the plane that owns that net, placed just off the pad by a
+collision-checked search. Power connectivity never depends on a pour reaching
+a pad. Rev A's long-running "unconnected pour island" findings were all that
+failure mode; with a via per pad, a power pad can only be unconnected if its
+via is missing, which DRC reports directly.
 
-Power connectivity does not rely on pour fill reaching a pad. Instead each
-`+3V3` and `GND` pad gets its **own short stub and via straight down to the
-plane that owns that net**, placed just off the pad by a collision-checked
-search (~107 bonded pads), plus ~195 GND stitching vias tying the F.Cu/B.Cu
-GND fill to the In1 plane.
+Two deliberate exceptions:
 
-The consequence worth remembering: a power pad can now only be unconnected
-if its via is missing, which DRC reports directly as an unconnected item.
-There is no longer such a thing as a "pour island" to hunt for.
+- **Plated through-hole pads are not bonded.** A PTH pad already spans
+  F.Cu..B.Cu and meets its plane on the way through. Adding a via beside it
+  buys nothing and puts a second drill 0.4mm from the first — that was the
+  source of most hole-to-hole violations and of two dangling `+3V3` vias
+  during the Rev B bring-up.
+- **Large exposed pads get a via array inside the pad** (the SCD41's 4.8mm
+  thermal pad, the module's 3.9mm one). A stub to a via outside them cannot
+  even be searched for, because every candidate within 3mm of the pad centre
+  is still on the pad. This is what a thermal pad wants anyway.
 
-**Watch the DNP flags when assigning decoupling.** `C11` is marked DNP in
-the schematic (it belongs to the optional expansion block, not to a core
-IC). An automated "put each cap next to the pin it serves" pass happily
-assigned it to U3, which would have shipped the ESP32 with no populated
-local bypass while the SCD41 got two. The populated 100nF caps are C1, C2,
-C8, C9, C10 and they map to U1, U3, U5, U4, U6 respectively — one per IC.
-If you re-run any placement automation, exclude DNP parts from the
-decoupling assignment or re-check this mapping afterwards.
-
-Two fine-pitch parts needed narrower escapes than the 0.4mm default stub:
-`U6` (BH1750, WSOF-6, 0.5mm pitch) and `U5` (BME680, LGA-8, 0.8mm pitch) use
-0.20-0.21mm stubs, which still clear the 0.20mm rule. Everything else uses
-0.4mm stubs and ordinary 0.6mm/0.3mm vias.
+Both the via *and the stub track leading to it* are collision-checked.
+Checking only the via lets the stub cut straight across whatever pad lies
+between — 61 GND/+3V3 shorts on the first attempt.
 
 ## Floorplan
 
-Placement is by function, not by arithmetic. The previous layout had been
-produced by proportionally scaling an older, denser board, which is why
-growing the board never fixed the local congestion: scaling moves parts
-apart but does not change pin-level geometry.
+Placement is by function, not by arithmetic.
 
 ```
- y 0-9    antenna keepout (all 4 copper layers)
- y 1-27   U3 ESP32-WROOM-32, centred, antenna at the top board edge
- y 10-30  left: EN/IO0 support, reset+boot switches, status LED
-          right: J2/J3 expansion headers on the right edge
- y 30-46  USB-C (left edge) -> U1 CH340C -> F1 -> U2 buck -> L1
- y 44-48  TP1-TP10 test point grid
- y 47-62  small headers (left), J4/J9 (right edge), buzzer
- y 62-80  sensor tab, thermally isolated (see below)
+ y 0.0-7.5    antenna keepout, all four copper layers, x 8..52
+ y 0.75-26.3  U3 ESP32-S3-WROOM-1, antenna flush with the top edge
+ y 8-30       left: EN/IO0 support, reset+boot buttons, status LED
+              right: J2/J3 headers on the right edge
+ y 30-46      USB-C (left edge) -> U8 ESD -> F1 -> U2 buck -> L1
+ y 43-48      test point grid, 4.0mm pitch
+ y 48-62      left: small headers; right: J4/J9; buzzer
+ y 62-80      sensor tab, milled free on three sides
 ```
 
-Rules this placement enforces, all of which the previous layout broke:
+Rules this enforces:
 
-- **Every decoupling capacitor sits 1.8-3.0mm from the pin it serves, on the
-  same side.** Previously all of them were on the *opposite* copper layer,
-  8-20mm away (C11 for the ESP32 was 11.3mm away on the back). At that
-  distance the loop inductance is roughly 10-20nH instead of 1-2nH, so the
-  cap does essentially nothing above a few MHz — which matters for an ESP32
-  drawing ~350mA bursts on TX.
-- **The buck converter loop is tight.** U2 -> L1 and the input capacitor are
-  adjacent and on the same layer as the regulator. Previously the SW node
-  was 8.8mm long and the input/output caps sat 8-12mm away on the other
-  layer — a large radiating loop next to a 2.4GHz receiver.
-- **All 73 parts are on the front.** Single-sided assembly is cheaper at
-  JLCPCB and, more importantly, it keeps the inner ground plane the only
-  thing between the two routing layers.
-- **Connectors are on edges**, USB-C on the left, expansion headers on the
-  right, sensors along the bottom.
+- **Decoupling sits next to the pin it serves.** `wisp_floorplan.ANCHOR` names
+  the pad each passive belongs to and `gen_pcb.py` runs a collision-checked
+  spiral search outward from it. The ESP32's 100nF and 10uF, the SCD41's
+  100nF, and the SGP41's RC element all land within a few millimetres of their
+  pin. Rev A had all of its decoupling on the *opposite* copper layer, 8-20mm
+  away, where above a few MHz it does essentially nothing.
+- **A part may not cross the milled slot to reach its pin.** The slot splits
+  the board into exactly two regions, and the placer requires a part to land
+  in the same one as its anchor pad. Without that check the SCD41's bulk
+  capacitor was placed 10mm away with a slot in between.
+- **Fixed placements are checked against each other.** Pin headers are
+  anchored at pin 1, not at their centre, so a 1x08 header extends ~20mm
+  *downwards* from its coordinate; spacing them by centre is how J5/J7 and
+  J9/MH4 first ended up overlapping.
+- **All 91 parts are on the front.** Single-sided assembly is cheaper, and it
+  keeps the inner ground plane the only thing between the two routing layers.
 
 ## RF: antenna placement
 
 `U3` sits at the top board edge with its antenna end pointing off-board, so
-the required clearance is mostly free air rather than reserved board area.
-A 24 x 9mm rule area above the module forbids tracks, vias, pads and zone
-fill **on all four copper layers** — on a 4-layer board the inner planes are
-what would detune the antenna most, so a keepout that only covered F.Cu and
-B.Cu would be worse than useless.
+the required clearance is mostly free air rather than reserved board area. A
+rule area over `x 8..52, y 0..7.5` forbids tracks, vias, pads and zone fill on
+**all four copper layers**.
 
-Previously the module sat in the middle of the board with the antenna
-pointing inward, burning a 26 x 16mm keepout in the board interior and
-forcing every net to detour around it.
+Rev A cleared only the module's own width (x 18..42), which left GND pour
+flush with the antenna on both sides. This clears ~9mm either side. It stops
+short of the board corners so the M3 mounting holes still have somewhere to
+live — the keepout forbids pads, and a mounting hole is a pad.
 
-**Fixed in this pass: U3's courtyard was stale.** The courtyard polygon had
-been written in absolute board coordinates into the footprint's *local*
-coordinate space by an earlier "shrink the courtyard" edit, so it never
-moved with the module. On the 100x100mm board it sat at x=9.8-28.9,
-y=-6.3-20.8 while U3's body was at (77.3, 36.2) — partly off-board, and
-genuinely overlapping J1's courtyard. The resulting `courtyards_overlap` and
-`*_inside_courtyard` reports were previously recorded here as "DRC engine
-noise, geometrically impossible", a conclusion reached by comparing
-footprint *origin* coordinates rather than the actual courtyard geometry.
-They were real. The courtyard is now rebuilt from the module body
-(18 x 25.5mm + 0.25mm margin) in local coordinates.
+### The module footprint is project-local, and why
+
+`wisp:ESP32-S3-WROOM-1` is a copy of the stock KiCad footprint with two
+changes:
+
+1. **The courtyard is trimmed to the module body** (x -9.75..9.75,
+   y -12.75..13.45). The stock courtyard is **48 x 41mm**: it applies
+   Espressif's 15mm antenna clearance symmetrically around the whole module
+   instead of only off the antenna end. Left alone it swallows a third of a
+   60x80mm board, blocks every nearby placement, and produces
+   courtyard-overlap DRC errors against parts nowhere near the module. Rev A
+   hit exactly this with the WROOM-32.
+2. **Its built-in antenna keepout zone is removed**, so the board carries one
+   deliberate antenna rule area instead of two overlapping ones with different
+   extents.
 
 ## Thermal isolation of the sensors
 
-SCD41 (`U4`), BME680 (`U5`) and BH1750 (`U6`) sit on a tab at the bottom of
-the board, x 21.5-46.5, y 63.5-80, cut free by a 1.5mm milled slot on three
-sides and joined to the main board only through an ~8.5mm neck. This is
+SCD41 (`U4`), SGP41 (`U5`), BH1750 (`U6`) and BME280 (`U7`) sit on a tab at
+the bottom of the board, x 19.5-49, y 62-80, cut free by a 1.5mm milled slot
+on three sides and joined to the main board through a 9mm neck. This is
 Sensirion's and Bosch's own recommendation: without it the parts report PCB
 temperature rather than room temperature, which for a room climate monitor
-defeats the primary function. The nearest heat sources (ESP32 at the top,
-regulator mid-board) are ~40mm away with the slot in between.
+defeats the primary function.
 
-Known tradeoff, deliberate: the GND and +3V3 planes still run through the
-neck, so the isolation comes from the slot geometry and distance rather than
-from a copper break. Narrowing the planes at the neck would improve it
-further and is a reasonable future refinement.
+The tab is larger than Rev A's 25 x 16.5mm. The SCD41 alone fills 40% of that,
+leaving nowhere to put its own decoupling — which is exactly what went wrong
+the first time. At 29.5 x 18mm every sensor keeps its decoupling on its own
+side of the slot.
 
-## Fab outputs
+The SGP41 is placed at the far end of the tab from the SCD41: it runs a
+hotplate, and the SCD41 is the sensor whose temperature reading has to stay
+honest.
 
-`hardware/fab/gerbers/` now contains only the layers a fab actually needs —
-the four copper layers, paste, silkscreen, mask and the board profile, plus
-separate PTH/NPTH Excellon drill files and their maps:
-
-```
-kicad-cli pcb export gerbers \
-  --layers F.Cu,In1.Cu,In2.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts \
-  -o hardware/fab/gerbers/ hardware/kicad/wisp.kicad_pcb
-kicad-cli pcb export drill --format excellon --excellon-separate-th \
-  --generate-map --map-format gerberx2 -o hardware/fab/gerbers/ hardware/kicad/wisp.kicad_pcb
-kicad-cli pcb export pos --format csv --units mm --side front --exclude-dnp \
-  -o hardware/fab/wisp-cpl-prototype.csv hardware/kicad/wisp.kicad_pcb
-```
-
-The earlier export also emitted Courtyard, Fab, Adhesive, Margin and User\_\*
-Gerbers. Those are documentation layers, and shipping them in the fab folder
-risks the fab's layer auto-detection counting them as copper — on a 4-layer
-board that is an expensive mistake, so they are no longer exported.
-
-Check `wisp-job.gbrjob` after any re-export: it must report
-`LayerNumber: 4` with `Copper,L1,Top` / `Copper,L2,Inr` / `Copper,L3,Inr` /
-`Copper,L4,Bot`. That file, not the filename extension, is what states the
-stackup order.
-
-The CPL lists 42 placements, all `top` — assembly is single-sided. The BOM
-is unchanged by this layout work, since the schematic was not touched.
-
-## Known ERC warnings (accepted, not bugs)
-
-**`Symbol '2N7002' doesn't match copy in library 'Transistor_FET'`**
-**`Symbol '1N4148' doesn't match copy in library 'Diode'`**
-
-KiCad's official libraries switched these to symbol inheritance
-(`(extends ...)`) after this schematic was authored; the schematic's cached
-copy still holds the old self-contained definition. Electrically identical —
-a library-version diff, not a design defect. It disappears the next time
-these symbols are re-placed from a matching library version.
-
-**`Pins of type Bidirectional and Power output are connected`** (U5 pin 5 /
-SDO tied to GND)
-
-`U5` (BME680) pin 5 (SDO) is intentionally strapped to GND to select I2C
-address `0x76`. The symbol marks SDO `Bidirectional`, so ERC flags any
-bidirectional pin wired to a power net. Confirmed via netlist export that
-U5 pin 5 sits on GND together with pins 1/7 — no short to +3V3.
-
-## Known DRC findings
-
-None outstanding. `kicad-cli pcb drc --severity-all` is clean: 0 violations
-and 0 unconnected items.
-
-Note that the categories this project previously carried as accepted
-findings are all gone rather than suppressed:
-
-- the 26 unconnected `GND`/`+3V3` pour islands — removed by the plane
-  stackup plus per-pad plane bonding;
-- the `MH1`/`MH2`/`J1` vs `U3` courtyard overlaps — a real bug (stale
-  courtyard), now fixed;
-- the U5 via-in-pad / via-size exception — obsolete, because +3V3 is now
-  reachable straight down from the pad with a standard 0.6mm via.
-  `wisp.kicad_dru` no longer defines any rule.
+**Known tradeoff, deliberate:** the GND and +3V3 planes still run through the
+neck, so the isolation comes from slot geometry and distance rather than from
+a copper break. Narrowing the planes at the neck would improve it further and
+remains a reasonable future refinement.
 
 ## Routing
 
-Signals are routed with Freerouting (headless,
-`--gui.enabled=false -mt 1`; multi-threaded optimisation is flagged by
-Freerouting itself as producing clearance violations). The DSN is exported
-with `pcbnew.ExportSpecctraDSN` — note that `kicad-cli pcb export` has no
-`specctra-dsn` subcommand in KiCad 10 — then patched so the inner layers are
-`(type power)` and the clearance rule is 0.25mm.
+Signals are routed with Freerouting (headless, `--gui.enabled=false -mt 1`;
+multi-threaded optimisation is flagged by Freerouting itself as producing
+clearance violations). The DSN is exported with `pcbnew.ExportSpecctraDSN` —
+note that `kicad-cli pcb export` has no `specctra-dsn` subcommand — then
+patched so the inner layers are `(type power)`.
 
-The 0.25mm routing clearance is deliberately above the 0.20mm board rule:
-Freerouting emits some fanout stubs at 0.15mm, which have to be widened to
-the 0.20mm minimum afterwards, and routing at 0.25mm leaves enough headroom
-that widening them cannot create a clearance violation.
+Afterwards, `close` removes anything the router left dangling and `join`
+closes any remaining open connection with a collision-checked A* over
+F.Cu/B.Cu with via transitions. `join` reads the DRC report to find what is
+open and rasterises the **whole** target net as its goal; aiming at a single
+reported coordinate is fragile, because a track's `GetPosition()` is one end
+of it rather than the nearest point.
 
-Anything Freerouting leaves unrouted is closed afterwards by a
-collision-checked A* over F.Cu/B.Cu with via transitions.
+**Minimum track width is 0.15mm.** The escapes under the fine-pitch sensors
+genuinely need it, and it is comfortably inside JLCPCB's 4-layer capability
+(0.127mm). Rev A instead routed at 0.25mm clearance and widened the router's
+0.15mm stubs back to 0.20mm afterwards; doing that here created clearance
+violations against neighbouring pads, and re-routing at 0.25mm made the router
+thrash without converging.
 
-### J1 (USB-C) needs a hand-placed escape fanout
+**If a net comes back unroutable, look at the test points first.** They sit in
+the busiest part of the board, and at Rev A's 3.2mm pitch the router boxed one
+in completely — a net that no amount of post-processing can reach, because the
+pad has no escape lane in any direction. They are at 4.0mm pitch now.
 
-This is the one part of the board the autorouter cannot be left to solve,
-and it is worth knowing before anyone re-routes.
+### J1 (USB-C)
 
-The receptacle brings D+ out on pads A6/B6 and D- on A7/B7, and the pads
-interleave down the column as **B6, A7, A6, B7** at 0.5mm pitch. Connecting
-each pair therefore requires exactly one crossing, which means one of them
-has to change layer — and a 0.6mm via needs ~1.2mm of vertical room, so no
-via fits between 0.5mm lanes. The crossing can only happen further out,
-where the lanes have spread.
+The receptacle brings D+ out on pads A6/B6 and D- on A7/B7, interleaved down
+the column as **B6, A7, A6, B7** at 0.5mm pitch, so connecting each pair needs
+exactly one layer crossing and a 0.6mm via needs ~1.2mm of vertical room. On
+Rev A this required a hand-placed fanout before autorouting.
 
-Left to itself the autorouter routes D+ along D-'s only escape lane and
-strands A7 with no legal path at any clearance. Growing the board does not
-help; this is pad-pitch geometry, not board density.
+On Rev B the pair runs J1 -> U8 (USBLC6 ESD array) -> U3 rather than J1 -> a
+UART bridge, and U8 is placed to give the crossing room, so the autorouter
+solves it unaided. If you re-place J1 or U8 and D- comes back unroutable, this
+is why.
 
-The fix is a fanout placed **before** autorouting, while the area is still
-empty:
+## Silkscreen
 
-1. every J1 signal leaves in its own lane out to x=3.4
-2. the lanes spread to ~0.9mm pitch by x=4.8, preserving their order
-3. D- crosses under D+ on B.Cu between two vias at x=4.8
-4. D+ closes on F.Cu at x=5.8, passing over that B.Cu crossing
+At 91 parts on 60x80mm a footprint's own silk outline routinely lands on the
+neighbouring part's pads. The `silk` stage:
 
-VBUS on A9/B4 is fenced in by the connector's own NPTH alignment hole and
-is bonded with a via placed inside the pad (verified clear of the hole, the
-neighbouring lands and the board edge). Every fanout segment and via is
-clearance-checked against all existing copper before being committed.
+- moves every footprint silk **graphic** to F.Fab, where it still appears in
+  the assembly drawing;
+- **auto-places the reference designators** with a collision-checked search
+  against pads, board edge and each other, largest parts first, and demotes
+  only the ones with nowhere to go;
+- moves **Value** to F.Fab;
+- and hides the custom metadata fields.
 
-If you re-place J1 or re-route from scratch, re-create this fanout first —
-otherwise the D- connection will fail again in exactly the same way.
+That last one matters more than it sounds. `MPN`, `Manufacturer`, `Rating` and
+`LCSC` are created on **F.SilkS by default and parked at the footprint
+origin**, stacked on top of each other and on the pads — 422 text items nobody
+ever intended to print. They are not returned by `GraphicalItems()`, so they
+are invisible to every other pass, and they were the entire source of ~440
+silkscreen DRC violations. If silkscreen violations reappear after adding a
+field, this is the first place to look.
+
+## Known ERC warnings (accepted, not bugs)
+
+**`Pins of type Bidirectional and Power output are connected`** (U7 pin 5 /
+SDO tied to GND)
+
+`U7` (BME280) pin 5 (SDO) is intentionally strapped to GND to select I2C
+address `0x76`. The symbol marks SDO `Bidirectional`, so ERC flags any
+bidirectional pin wired to a power net. Either address strap produces this;
+it cannot be avoided while the address is fixed in hardware.
+
+Rev A's two `lib_symbol_mismatch` warnings are gone: the generator embeds
+symbols straight from the installed library, so a cached copy cannot drift
+from it.
+
+## Known DRC findings
+
+None. `kicad-cli pcb drc --severity-all` is clean: 0 violations, 0 unconnected
+items, 0 schematic-parity errors.
+
+Two design rules were deliberately changed from Rev A, both recorded in
+`wisp.kicad_pro`:
+
+- `min_track_width` 0.20 -> **0.15mm** — see Routing above.
+- `min_resolved_spokes` 2 -> **1** — a handful of GND pads can only get one
+  thermal spoke past their neighbours. One spoke is a valid connection, and
+  every affected pad is a power pad that also carries its own plane via, so
+  the spoke is a secondary path in any case.
+
+## Fab outputs
+
+`hardware/fab/gerbers/` contains only the layers a fab actually needs — the
+four copper layers, paste, silkscreen, mask and the board profile, plus
+separate PTH/NPTH Excellon drill files and their maps.
+
+Check `wisp-job.gbrjob` after any re-export: it must report `LayerNumber: 4`
+with `Copper,L1,Top` / `Copper,L2,Inr` / `Copper,L3,Inr` / `Copper,L4,Bot`.
+That file, not the filename extension, is what states the stackup order.
+
+## Before ordering
+
+**`wisp:BH1750FVI-TR_WSOF6` is still a DRAFT footprint.** Its pad geometry was
+derived from datasheet *text*, never checked against ROHM's mechanical
+drawing, and that drawing could not be retrieved to verify it (404 from both
+ROHM CDNs, 403 from rohm.com, Mouser serves HTML instead of the PDF). A
+courtyard has been added — it previously had none at all, so it got no
+collision protection — but **the land pattern itself is unverified**. Print it
+1:1 and compare against the part, or replace the footprint, before committing
+to an assembly run.
+
+`wisp:Sensirion_DFN-6-1EP_2.44x2.44mm_P0.8mm_EP1.25x1.7mm` (SGP41) *was*
+verified against the datasheet's land-pattern figure. Note that the `2.3`
+dimension in that figure is **centre-to-centre** across the two pad columns,
+not outer-to-outer; reading it the other way puts the terminal pads at
+±0.875mm where they physically overlap the die pad, which DRC catches as four
+shorts inside the part.
+
+**No LCSC part numbers are in the BOM.** Every part carries an `MPN`,
+`Manufacturer` and a `Rating` (voltage/tolerance/current class), which is what
+you need to buy them from a distributor. LCSC numbers were deliberately not
+guessed — a wrong one silently orders the wrong part. Fill them in from the
+LCSC catalogue before uploading for PCBA.
+
+**Sensor handling.** Sensirion specifies that the SGP41 must **not** be hand-
+soldered or vapour-phase soldered, and that board wash and ultrasonic cleaning
+must be avoided; Bosch says the same about cleaning agents near the BME280's
+sensing element. If you order PCBA, ask for no-clean and no board wash.
