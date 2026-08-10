@@ -2301,7 +2301,7 @@
 				)
 			)
 		)
-		(property "MPN" "WS2812B"
+		(property "MPN" "WS2812B-B/T"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -2330,6 +2330,18 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "a58f77a6-83ff-454b-9f81-5606183c0992")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC" "C2761795"
+			(at 0 0 0)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "790115d7-5ab5-461d-8aca-5e34204bb33f")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4743,7 +4755,7 @@
 				)
 			)
 		)
-		(property "MPN" "150080GS75000"
+		(property "MPN" "KT-0805G"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4755,7 +4767,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Wurth"
+		(property "Manufacturer" "Hubei KENTO Elec"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4772,6 +4784,18 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "277bd066-f95d-4eba-bee5-678cf2e4c438")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC" "C2297"
+			(at 0 0 0)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "84b21125-7de9-42b2-8edb-ca7a122c28e7")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7979,7 +8003,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Diodes Incorporated"
+		(property "Manufacturer" "MDD (Microdiode Semiconductor)"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7996,6 +8020,18 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "b6570589-e8e0-4003-9eea-9a91c2e6d31c")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC" "C2480"
+			(at 0 0 0)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "5d30e7ae-ccf3-4446-812d-aeb2c9f5af7d")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9335,7 +9371,7 @@
 				)
 			)
 		)
-		(property "MPN" "CL21A105KBFNNNE"
+		(property "MPN" "CL21B105KBFNNNE"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -9359,11 +9395,23 @@
 				)
 			)
 		)
-		(property "Rating" "25V X5R"
+		(property "Rating" "50V X7R"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "2e992781-84ad-464a-b7ee-5e1a41ec8583")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC" "C28323"
+			(at 0 0 0)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "d5ddaabf-5dff-4169-893c-52bf6968e245")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18005,7 +18053,7 @@
 				)
 			)
 		)
-		(property "MPN" "CL21A105KBFNNNE"
+		(property "MPN" "CL21B105KBFNNNE"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -18029,11 +18077,23 @@
 				)
 			)
 		)
-		(property "Rating" "25V X5R"
+		(property "Rating" "50V X7R"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "8535763b-24b8-4d10-8cd4-9d4a94ffce55")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC" "C28323"
+			(at 0 0 0)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "7a7f69fc-6e7c-449c-a556-dc0583975cb4")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19321,7 +19381,7 @@
 				)
 			)
 		)
-		(property "MPN" "CL21A105KBFNNNE"
+		(property "MPN" "CL21B105KBFNNNE"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -19345,11 +19405,23 @@
 				)
 			)
 		)
-		(property "Rating" "25V X5R"
+		(property "Rating" "50V X7R"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "bec6362f-9f20-4ed4-b4d0-989570c89228")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC" "C28323"
+			(at 0 0 0)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "fb1b1ba8-7e9c-4a70-9ed4-bd36e96067dc")
 			(effects
 				(font
 					(size 1.27 1.27)
