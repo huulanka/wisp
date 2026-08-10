@@ -154,20 +154,24 @@ PARTS = [
          mpn="RC0805FR-074K7L", mfr="Yageo", lcsc="C60816", rating="1%, I2C pull-up",
          group="sensor"),
 
-    # ---- Test points -----------------------------------------------------
-    dict(ref="TP1", lib="Connector:TestPoint", val="JTAG_MTDI", fp=TP, group="tp"),
-    dict(ref="TP2", lib="Connector:TestPoint", val="JTAG_MTCK", fp=TP, group="tp"),
-    dict(ref="TP3", lib="Connector:TestPoint", val="JTAG_MTMS", fp=TP, group="tp"),
-    dict(ref="TP4", lib="Connector:TestPoint", val="JTAG_MTDO", fp=TP, group="tp"),
-    dict(ref="TP5", lib="Connector:TestPoint", val="+3V3", fp=TP, group="tp"),
-    dict(ref="TP6", lib="Connector:TestPoint", val="GND", fp=TP, group="tp"),
-    dict(ref="TP7", lib="Connector:TestPoint", val="SDA", fp=TP, group="tp"),
-    dict(ref="TP8", lib="Connector:TestPoint", val="SCL", fp=TP, group="tp"),
-    dict(ref="TP9", lib="Connector:TestPoint", val="EN", fp=TP, group="tp"),
-    dict(ref="TP10", lib="Connector:TestPoint", val="IO0", fp=TP, group="tp"),
-    dict(ref="TP11", lib="Connector:TestPoint", val="UART0_TX", fp=TP, group="tp"),
-    dict(ref="TP12", lib="Connector:TestPoint", val="UART0_RX", fp=TP, group="tp"),
-    dict(ref="TP13", lib="Connector:TestPoint", val="LED_DOUT", fp=TP, group="tp"),
+    # ---- Test points -------------------------------------------------------
+    # Bare pads, not real components: excluded from position files by the
+    # TestPoint footprint's own KiCad attribute, so they must also be
+    # excluded from the BOM here or the two fab outputs disagree on which
+    # designators exist (JLCPCB's assembly check rejects that mismatch).
+    dict(ref="TP1", lib="Connector:TestPoint", val="JTAG_MTDI", fp=TP, group="tp", exclude_bom=True),
+    dict(ref="TP2", lib="Connector:TestPoint", val="JTAG_MTCK", fp=TP, group="tp", exclude_bom=True),
+    dict(ref="TP3", lib="Connector:TestPoint", val="JTAG_MTMS", fp=TP, group="tp", exclude_bom=True),
+    dict(ref="TP4", lib="Connector:TestPoint", val="JTAG_MTDO", fp=TP, group="tp", exclude_bom=True),
+    dict(ref="TP5", lib="Connector:TestPoint", val="+3V3", fp=TP, group="tp", exclude_bom=True),
+    dict(ref="TP6", lib="Connector:TestPoint", val="GND", fp=TP, group="tp", exclude_bom=True),
+    dict(ref="TP7", lib="Connector:TestPoint", val="SDA", fp=TP, group="tp", exclude_bom=True),
+    dict(ref="TP8", lib="Connector:TestPoint", val="SCL", fp=TP, group="tp", exclude_bom=True),
+    dict(ref="TP9", lib="Connector:TestPoint", val="EN", fp=TP, group="tp", exclude_bom=True),
+    dict(ref="TP10", lib="Connector:TestPoint", val="IO0", fp=TP, group="tp", exclude_bom=True),
+    dict(ref="TP11", lib="Connector:TestPoint", val="UART0_TX", fp=TP, group="tp", exclude_bom=True),
+    dict(ref="TP12", lib="Connector:TestPoint", val="UART0_RX", fp=TP, group="tp", exclude_bom=True),
+    dict(ref="TP13", lib="Connector:TestPoint", val="LED_DOUT", fp=TP, group="tp", exclude_bom=True),
 
     # ---- Expansion: second I2C ------------------------------------------
     dict(ref="J2", lib="Connector_Generic:Conn_01x04", val="Second I2C Bus",
