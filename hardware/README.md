@@ -273,7 +273,27 @@ from it.
 None. `kicad-cli pcb drc --severity-all` is clean: 0 violations, 0 unconnected
 items, 0 schematic-parity errors.
 
-Two design rules were deliberately changed from Rev A, both recorded in
+This is no longer a low bar: `wisp.kicad_dru` used to carry no rules, and the
+board's own `min_silk_clearance` / `solder_mask_to_copper_clearance` were both
+0mm, so KiCad's DRC could not have caught a real fab-capability problem even
+if one existed. A JLCPCB DFM report against an earlier build of this board
+found real ones — 0.15mm silk-line width flagged, silkscreen text on top of
+vias, negative silk/pad clearance — none of which local DRC saw, because
+nothing was checking for it. Design rules in `wisp.kicad_pro` now match
+JLCPCB's published capability (`min_silk_clearance` 0.15mm,
+`solder_mask_to_copper_clearance` 0.1mm, `min_hole_clearance` 0.3mm) instead
+of the KiCad defaults, and DRC is clean against those.
+
+The root cause of the silkscreen findings was in `gen_pcb.py`'s `silk` stage,
+not just the missing rule: reference-designator placement estimated each
+label's width from a `0.62mm/character` formula instead of asking KiCad for
+the real rendered bounding box, and undershot it by up to 0.48mm — enough
+that designators the search believed were clear were actually touching
+neighbouring pads and vias. It also never considered vias as obstacles at
+all. Both are fixed: the search now queries `GetBoundingBox()` on the actual
+text object, and vias are indexed alongside pads.
+
+Three design rules were deliberately changed from Rev A/B, all recorded in
 `wisp.kicad_pro`:
 
 - `min_track_width` 0.20 -> **0.15mm** — see Routing above.
@@ -281,6 +301,27 @@ Two design rules were deliberately changed from Rev A, both recorded in
   thermal spoke past their neighbours. One spoke is a valid connection, and
   every affected pad is a power pad that also carries its own plane via, so
   the spoke is a secondary path in any case.
+- `min_hole_clearance` 0.25 -> **0.3mm** — JLCPCB's stated absolute minimum is
+  0.28mm; 0.25 was below it even though nothing on the board was actually
+  that tight.
+
+Two things the DFM report flags that are **not** being changed, both reviewed
+and accepted rather than silently ignored:
+
+- **Every via's annular ring is 0.15mm** (0.6mm pad / 0.3mm drill), which
+  JLCPCB's own DFM tool marks as a Warning because it sits exactly at their
+  stated *absolute minimum* rather than their *recommended* 0.20mm. Widening
+  every via on this already-dense 60x80mm/91-part board would mean re-routing
+  under a tighter budget for a purely precautionary margin; treated the same
+  way as the `min_track_width` and `min_resolved_spokes` exceptions above.
+- **J1's four shield-ground pads are 0.6mm oval plated slots**, flagged by
+  JLCPCB as a slot-width Danger. This geometry comes from KiCad's own stock
+  `Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12` footprint (the part
+  actually specified: HRO TYPE-C-31-M-12, LCSC C165948), not from anything
+  wisp-specific, and the same footprint is in wide use on JLCPCB-fabricated
+  boards. Not changed here since fixing it means swapping the connector
+  itself; worth a manual check with JLCPCB before ordering if it matters for
+  your run.
 
 ## Fab outputs
 
@@ -294,14 +335,16 @@ That file, not the filename extension, is what states the stackup order.
 
 ## Before ordering
 
-**`wisp:BH1750FVI-TR_WSOF6` is still a DRAFT footprint.** Its pad geometry was
-derived from datasheet *text*, never checked against ROHM's mechanical
-drawing, and that drawing could not be retrieved to verify it (404 from both
-ROHM CDNs, 403 from rohm.com, Mouser serves HTML instead of the PDF). A
-courtyard has been added — it previously had none at all, so it got no
-collision protection — but **the land pattern itself is unverified**. Print it
-1:1 and compare against the part, or replace the footprint, before committing
-to an assembly run.
+**`wisp:BH1750FVI-TR_WSOF6` is now verified.** ROHM's mechanical drawing
+(BH1750FVI Technical Note No.11046EDT01 Rev.D, p.14 "Package Outlines") turned
+out to be reachable after all; the land pattern was rebuilt from its figures
+(body 1.6 x 2.6mm, 0.5mm pitch, 0.22mm lead width, 0.27mm lead foot) and
+cross-checked against the LCSC C78960 listing's own generated footprint,
+which agrees on pitch and pad size once its axes are rotated into this
+footprint's convention. Pin 7 is the exposed centre pad; the datasheet (p.16,
+"Cautions on use" #10) says explicitly not to solder or electrically connect
+it, so it is copper-only with no paste and no net, for mechanical registration
+rather than a thermal/ground connection.
 
 `wisp:Sensirion_DFN-6-1EP_2.44x2.44mm_P0.8mm_EP1.25x1.7mm` (SGP41) *was*
 verified against the datasheet's land-pattern figure. Note that the `2.3`
@@ -310,13 +353,32 @@ not outer-to-outer; reading it the other way puts the terminal pads at
 ±0.875mm where they physically overlap the die pad, which DRC catches as four
 shorts inside the part.
 
-**No LCSC part numbers are in the BOM.** Every part carries an `MPN`,
-`Manufacturer` and a `Rating` (voltage/tolerance/current class), which is what
-you need to buy them from a distributor. LCSC numbers were deliberately not
-guessed — a wrong one silently orders the wrong part. Fill them in from the
-LCSC catalogue before uploading for PCBA.
+**LCSC part numbers are filled in for 27 of 33 unique parts** (verified
+against each part's LCSC catalogue page — manufacturer, MPN and package all
+checked, not guessed). Six remain deliberately blank rather than guessed:
 
-**Sensor handling.** Sensirion specifies that the SGP41 must **not** be hand-
-soldered or vapour-phase soldered, and that board wash and ultrasonic cleaning
-must be avoided; Bosch says the same about cleaning agents near the BME280's
-sensing element. If you order PCBA, ask for no-clean and no board wash.
+- `CL21A105KBFNNNE` (Samsung, 1uF 25V X5R 0805) — not stocked; only the
+  B-series `CL21B105KBFNNNE` (C28323) exists, a different part.
+- `WS2812B` (Worldsemi) — LCSC only lists suffixed variants
+  (`WS2812B-B/T`, `-B/W`, `-V5`, `-V6`, ...); which one needs confirming.
+- `150080GS75000` (Wurth, green 0805 LED) — not stocked on LCSC at all.
+- `SS14` (Diodes Incorporated) — sold on LCSC under other manufacturers only.
+- `SCD41-D-R2` / `SGP41-D-R4` (Sensirion) — not on LCSC's own catalogue;
+  both are sourceable through JLCPCB's separate Extended Parts Library
+  (seen there as C3659294 / C3659325), which is a different lookup than
+  lcsc.com and should be confirmed directly in JLCPCB's BOM tool at order
+  time rather than trusted from a search result.
+
+Also caught in the process: `F1`'s footprint was `Fuse_1206_3216Metric`, but
+`MF-MSMF050-2` (Bourns) is actually a 1812 part — fixed to
+`Fuse_1812_4532Metric` (LCSC C17313).
+
+**Sensor handling.** Sensirion's datasheet (section 5.4, "Soldering
+Instructions") specifies: standard reflow ovens only, "no-clean" type 3
+solder paste (IPC J-STD-005A), peak temperature 245°C for up to 30s
+(Pb-free, IPC/JEDEC J-STD-020), max ramp-down 4°C/s. Vapor-phase or manual
+soldering must **not** be used — it can damage the sensor. Board wash and
+ultrasonic cleaning must be avoided. Bosch says the same about cleaning
+agents near the BME280's sensing element. If you order PCBA, put this in
+the order notes: no-clean paste, standard reflow only, no hand or
+vapor-phase soldering, no board wash.
