@@ -67,11 +67,20 @@ First deployment target: living room (`wohnzimmer`).
 
 ## Firmware
 
-- Framework: ESP-IDF, C++ — not Arduino, not ESPHome. Full control over
-  the code and its extensibility.
+- Framework: ESP-IDF, Rust via `esp-idf-svc` (std Rust on top of ESP-IDF) —
+  not Arduino, not ESPHome, and deliberately not bare-metal `esp-hal`: the
+  std/`esp-idf-svc` path keeps ESP-IDF's own OTA, Secure Boot v2, and WiFi
+  provisioning tooling usable as-is, rather than reimplementing them against
+  a `no_std` HAL. Full control over the code and its extensibility, with
+  memory safety as a deliberate benefit for a network-facing, OTA-updated
+  device. ESP32-S3 is Xtensa, so the toolchain is Espressif's Rust fork,
+  installed via `espup`.
 - OTA updates are a first-class requirement from the start — no USB
   reflashing needed after the initial flash.
 - Publishes sensor readings over MQTT.
+- Full software architecture (provisioning, task/thread design, MQTT topic
+  set, OTA, diagnostics): `docs/firmware-architecture.md` and
+  `docs/infra-architecture.md`.
 
 ## MQTT topic structure
 

@@ -11,8 +11,8 @@ It tracks CO2, VOC/air quality, temperature, humidity, and ambient light, and pu
 ## Repo structure
 
 - `/hardware` — KiCad project (schematic, PCB layout, Gerbers, BOM, CPL). Board is based on a certified ESP32-S3-WROOM-1 module (no custom RF/antenna design), I2C sensors, USB-C-only power (no battery). The S3 has native USB, so there is no USB-UART bridge and no auto-reset transistor pair. Target fab/assembly is JLCPCB, so BOM/CPL parts must stay compatible with their catalog (LCSC). Populated: schematic and PCB are routed, Gerbers and BOM/CPL are exported under `hardware/fab/`.
-- `/firmware` — ESP-IDF firmware in C++ (not Arduino, not ESPHome). Publishes sensor data over MQTT. OTA updates are a first-class requirement, not an afterthought — no USB reflashing after initial flash. Not started yet.
-- `/infra` — Docker Compose setup: Mosquitto MQTT broker (auth + TLS, no anonymous access, topic-level ACLs) and Home Assistant, which bridges MQTT into HomeKit. Not started yet.
+- `/firmware` — ESP-IDF firmware in Rust, via `esp-idf-svc` (std Rust on top of ESP-IDF) — not Arduino, not ESPHome, and not bare-metal `esp-hal`; the std/`esp-idf-svc` path was chosen specifically to keep ESP-IDF's OTA, Secure Boot v2, and WiFi provisioning tooling usable as-is. ESP32-S3 is Xtensa, so the toolchain is Espressif's Rust fork, managed via `espup`, not stock `rustup`. Publishes sensor data over MQTT. OTA updates are a first-class requirement, not an afterthought — no USB reflashing after initial flash. Not started yet. See `docs/firmware-architecture.md` and `docs/infra-architecture.md` for the full software design.
+- `/infra` — Docker Compose setup: Mosquitto MQTT broker (auth + TLS, no anonymous access, topic-level ACLs), a self-hosted OTA file/manifest server, and Home Assistant, which bridges MQTT into HomeKit. Not started yet.
 - `/docs` — design concept, sensor rationale, build/assembly notes. Populated: `concept.md` and `hardware-expandability.md`.
 
 ### `/hardware` conventions
