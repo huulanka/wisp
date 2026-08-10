@@ -197,11 +197,13 @@ parts for later builds.
 
 ### Still open before ordering
 
-1. **The BH1750 footprint is unverified.** Its pad geometry came from
-   datasheet text, and ROHM's mechanical drawing could not be retrieved to
-   check it. Print 1:1 and compare, or replace the footprint.
-2. **No LCSC part numbers** except the USBLC6. Every part has an MPN,
-   manufacturer and rating; LCSC numbers were not guessed, because a wrong one
-   silently orders the wrong part.
-3. **Narrowing the planes at the sensor-tab neck** would improve thermal
+The BH1750 footprint is verified and LCSC numbers are filled in for 31 of 33
+unique parts — see `hardware/README.md` ("Before ordering") for the sourcing
+detail. What's left:
+
+1. **`SCD41-D-R2` / `SGP41-D-R4` (Sensirion) have no LCSC number** — they
+   aren't on LCSC's own catalogue at all, only JLCPCB's separate Extended
+   Parts Library. Confirm those two directly in JLCPCB's BOM tool at order
+   time rather than trusting a search result.
+2. **Narrowing the planes at the sensor-tab neck** would improve thermal
    isolation further. Deliberately not done blind during the Rev B rework.

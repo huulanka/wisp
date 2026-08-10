@@ -353,16 +353,36 @@ not outer-to-outer; reading it the other way puts the terminal pads at
 ±0.875mm where they physically overlap the die pad, which DRC catches as four
 shorts inside the part.
 
-**LCSC part numbers are filled in for 27 of 33 unique parts** (verified
+**LCSC part numbers are filled in for 31 of 33 unique parts** (verified
 against each part's LCSC catalogue page — manufacturer, MPN and package all
-checked, not guessed). Six remain deliberately blank rather than guessed:
+checked, not guessed). Four that were previously blank are now resolved to a
+specific, in-stock LCSC listing rather than the original MPN, because the
+original either isn't stocked or doesn't specify a concrete orderable part:
 
-- `CL21A105KBFNNNE` (Samsung, 1uF 25V X5R 0805) — not stocked; only the
-  B-series `CL21B105KBFNNNE` (C28323) exists, a different part.
-- `WS2812B` (Worldsemi) — LCSC only lists suffixed variants
-  (`WS2812B-B/T`, `-B/W`, `-V5`, `-V6`, ...); which one needs confirming.
-- `150080GS75000` (Wurth, green 0805 LED) — not stocked on LCSC at all.
-- `SS14` (Diodes Incorporated) — sold on LCSC under other manufacturers only.
+- `CL21A105KBFNNNE` (Samsung, 1uF 25V X5R 0805) → **`CL21B105KBFNNNE`**
+  (C28323, 1uF 50V X7R 0805). Not a like-for-like MPN, but a strict
+  superset for this use (decoupling on 3.3V/5V rails, both ratings far
+  exceed either rail): higher voltage headroom, X7R is the more
+  temperature-stable dielectric, same package and value.
+- `WS2812B` (Worldsemi) → **`WS2812B-B/T`** (C2761795). LCSC only lists
+  suffixed variants; `-B/T` is the standard black-case, tape-and-reel part
+  in the PLCC-4 5.0x5.0mm/1.6mm package the footprint and datasheet
+  (VDD 3.5-5.3V) already assume, and it's the variant behind most
+  WS2812B designs seen in the wild.
+- `150080GS75000` (Wurth, green 0805 LED) → **`KT-0805G`** (Hubei KENTO
+  Elec, C2297). Not stocked on LCSC at all under the Wurth MPN; KT-0805G is
+  a green 0805 indicator LED in the same package with a comparable forward
+  voltage (2.6-3.1V vs. the Wurth part's 3.2V), so it drops in against the
+  existing R21 series resistor without a value change.
+- `SS14` (Diodes Incorporated) → same generic part, **manufacturer MDD
+  (Microdiode Semiconductor)** (C2480). `SS14` is an industry-standard
+  1A/40V Schottky part number that several manufacturers second-source;
+  Diodes Incorporated's isn't on LCSC, MDD's is — same footprint (SMA),
+  same rating (40V/1A, 550mV @ 1A).
+
+Two remain deliberately blank, because they are not resolvable through
+LCSC's catalogue at all:
+
 - `SCD41-D-R2` / `SGP41-D-R4` (Sensirion) — not on LCSC's own catalogue;
   both are sourceable through JLCPCB's separate Extended Parts Library
   (seen there as C3659294 / C3659325), which is a different lookup than
