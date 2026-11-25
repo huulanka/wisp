@@ -22,7 +22,8 @@ Board is 60 x 80 mm. Origin is the top-left corner, +y is down.
                right: J2/J3 headers on the right edge
   y 30-46      USB-C (left edge) -> U8 ESD -> F1 -> U2 buck -> L1
   y 44-48      test point grid
-  y 48-62      left: small headers; right: J4/J9; buzzer
+  y 48-55.5    right: J4/J9; buzzer
+  y 54-68      left: small headers (pushed down off the USB-C block)
   y 63.5-80    sensor tab, milled free on three sides
 """
 
@@ -66,10 +67,18 @@ FIXED = {
     # Pin headers are anchored at pin 1, not at their centre, so a 1x08 header
     # placed at y extends ~20mm *downwards* from there. Spacing these by their
     # centres is how J5/J7 and J9/MH4 first ended up overlapping.
-    "J5": (4.5, 48.0, 0),
-    "J6": (12.0, 48.0, 0),
-    "J7": (4.5, 57.0, 0),
-    "J8": (12.0, 57.0, 0),
+    #
+    # J5/J6 sit right under the USB-C block (J1 occupies y 30-46), which left
+    # only ~2mm of clearance -- not enough room for a mated USB-C cable body
+    # plus the wire harnesses landing on J5/J6 without them fouling each
+    # other. Pushed down to y=54 for real clearance; J7/J8 move with them to
+    # keep their own spacing to J5/J6. The left margin (x < 18, outside the
+    # sensor tab's slot) is clear all the way to the board bottom, so there's
+    # no knock-on collision.
+    "J5": (4.5, 54.0, 0),
+    "J6": (12.0, 54.0, 0),
+    "J7": (4.5, 63.0, 0),
+    "J8": (12.0, 63.0, 0),
 
     # ---- buzzer
     "BZ1": (30.0, 55.5, 0),
